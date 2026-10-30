@@ -287,8 +287,8 @@
               <option value="all">全部可选</option>
             </select>
             <select id="difficultySelect" class="field" aria-label="游戏难度">
-              <option value="simple">简单 · 实际困难</option>
-              <option value="hard">困难 · 地狱级</option>
+              <option value="simple">简单</option>
+              <option value="hard">困难</option>
             </select>
           </div>
           <div class="terminal-status">
@@ -533,8 +533,8 @@
       marketAssets = marketAssets.concat(stockAssets, fxAssets);
       const MARKET_DAY_MS = 24 * 60 * 60 * 1000;
       const difficultySettings = {
-        simple: { volatility: 2.4, fee: 0.012, slip: 0.009, jump: 0.04, label: "简单 · 实际困难" },
-        hard: { volatility: 7, fee: 0.04, slip: 0.025, jump: 0.14, label: "困难 · 地狱级" }
+        simple: { volatility: 2.4, fee: 0.012, slip: 0.009, jump: 0.04, label: "简单" },
+        hard: { volatility: 7, fee: 0.04, slip: 0.025, jump: 0.14, label: "困难" }
       };
       const tauntOpeners = ["你太菜了", "手速挺快，方向全反", "恭喜触发学费返还", "这波操作很有勇气", "市场都替你捏把汗", "仓位管理暂时离家出走", "止损按钮今天休假了", "技术分析看了个寂寞", "恭喜解锁归零体验卡", "K线看了都摇头"];
       const tauntLessons = ["菜就多练", "复盘别只看最后一根K线", "先把仓位缩小再来", "这次是模拟盘，吸取教训", "记得给杠杆降降温", "休息一下，别和行情赌气", "风控作业还欠一份", "把止损写进交易计划", "市场不会因为你着急就反转", "再检查一次保证金"];
