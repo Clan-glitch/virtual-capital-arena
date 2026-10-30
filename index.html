@@ -168,6 +168,14 @@
     .page-label { color: var(--muted); font-size: 10px; text-align: center; }
     .footer { margin-top: 18px; color: #69758b; font-size: 10px; line-height: 1.6; text-align: center; }
     .toast { position: fixed; right: 20px; bottom: 20px; z-index: 3; max-width: min(390px, calc(100vw - 40px)); padding: 12px 15px; border: 1px solid #3c5375; border-radius: 12px; background: #17253a; box-shadow: 0 12px 35px #0008; font-size: 12px; animation: appear .18s ease-out; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #030711cc; backdrop-filter: blur(8px); }
+    .modal-backdrop[hidden] { display: none; }
+    .modal-card { width: min(430px, 100%); padding: 26px; border: 1px solid #61434f; border-radius: 20px; background: linear-gradient(155deg, #211824, #101725); box-shadow: 0 24px 80px #000b; text-align: center; }
+    .modal-emoji { font-size: 44px; }
+    .modal-card h2 { margin-top: 8px; font-size: 20px; }
+    .modal-taunt { min-height: 60px; margin: 18px 0 8px; color: #ffabb7; font-size: 19px; font-weight: 750; line-height: 1.5; }
+    .modal-counter { color: var(--muted); font-size: 11px; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
     @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 980px) {
       .app { padding: 17px; }
@@ -222,7 +230,7 @@
       <div class="top-actions">
         <span class="live-chip"><i class="live-dot"></i>模拟市场</span>
         <span id="dayBadge" class="day-chip">第 1 天</span>
-        <button id="nextDay" class="button primary">推进一天 →</button>
+        <span id="autoClock" class="live-chip">24 小时自动结算中…</span>
         <button id="resetGame" class="button subtle" title="清除本机进度并重新开始">重开</button>
       </div>
     </header>
@@ -253,7 +261,7 @@
 
         <section class="card terminal-card">
           <div class="card-heading">
-            <div><h2>多市场模拟交易终端</h2><div class="section-note">高流动性加密资产公开行情 · 外汇使用演示报价</div></div>
+            <div><h2>多市场模拟交易终端</h2><div class="section-note">现货/永续实时挂牌 · 公开外汇参考 · 虚拟股票</div></div>
             <span class="market-tag">虚拟账户</span>
           </div>
           <div class="terminal-toolbar">
@@ -271,7 +279,16 @@
               <option value="all">全部市场</option>
               <option value="spot">现货</option>
               <option value="futures">永续合约</option>
+              <option value="stocks">股票</option>
               <option value="forex">外汇演示</option>
+            </select>
+            <select id="marketListMode" class="field" aria-label="品种筛选">
+              <option value="hot">主流 / 热门</option>
+              <option value="all">全部可选</option>
+            </select>
+            <select id="difficultySelect" class="field" aria-label="游戏难度">
+              <option value="simple">简单 · 实际困难</option>
+              <option value="hard">困难 · 地狱级</option>
             </select>
           </div>
           <div class="terminal-status">
@@ -296,11 +313,8 @@
                 <input id="marketQty" class="field" type="number" min="0.0001" step="0.0001" value="0.001" inputmode="decimal">
               </div>
               <div class="form-row" id="leverageRow">
-                <label for="leverageSelect">杠杆（仅模拟永续合约）</label>
-                <select id="leverageSelect" class="field">
-                  <option value="2">2×</option><option value="5" selected>5×</option>
-                  <option value="10">10×</option><option value="20">20×</option>
-                </select>
+                <label for="leverageSelect">杠杆（1–1000×；倍数越高越易爆仓）</label>
+                <input id="leverageSelect" class="field" type="number" min="1" max="1000" step="1" value="5" inputmode="numeric">
               </div>
               <div class="order-summary"><span>模拟名义金额</span><strong id="marketNotional">$—</strong></div>
               <div class="order-summary"><span>预估占用保证金</span><strong id="marketMargin">$—</strong></div>
@@ -316,7 +330,7 @@
                 <button id="marketCloseFuture" class="button" disabled>平仓</button>
               </div>
               <div id="marketOrderHint" class="hint" role="status">请选择市场。真实下单已禁用。</div>
-              <div class="risk-note">模拟订单仅用于学习。杠杆会放大盈亏并可能触发模拟强平；永续合约不含真实资金费率、撮合或平台清算规则。</div>
+              <div class="risk-note">高难模式加入远高于市场的手续费、滑点和模拟跳价。1–1000×只代表游戏选项，不代表交易平台规则或可用杠杆。</div>
             </div>
             <div>
               <h2>模拟持仓</h2>
@@ -416,6 +430,16 @@
     <footer class="footer">股票、AI 对战、交易委托、合约、外汇、借贷与排行榜均为本地模拟，不是真实投资建议或金融服务。加密行情仅从所选交易所公开 WebSocket 只读订阅；连接失败时显示模拟演示价格。真实交易、实名用户榜与借贷需独立后端、授权、合规和风控，本页面不提供这些服务。</footer>
   </div>
   <div id="toast" class="toast" role="status" hidden></div>
+  <div id="liquidationModal" class="modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="liquidationTitle">
+    <div class="modal-card">
+      <div class="modal-emoji" aria-hidden="true">💥</div>
+      <h2 id="liquidationTitle">模拟爆仓</h2>
+      <p id="liquidationTaunt" class="modal-taunt">你太菜了，菜就多练！</p>
+      <p id="liquidationCounter" class="modal-counter"></p>
+      <div class="modal-actions"><button id="nextTaunt" class="button">再来一句</button><button id="dismissLiquidation" class="button primary">继续练习</button></div>
+      <p class="risk-note">仅为游戏模拟提示；不会影响任何真实账户或资金。</p>
+    </div>
+  </div>
 
   <script>
     (() => {
@@ -425,14 +449,14 @@
       const MARKET_STORAGE_KEY = "virtual-capital-market-v1";
       const INITIAL_CASH = 100000;
       const MARKET_INITIAL_CASH = 100000;
-      const marketAssets = [
-        { id: "BTCUSDT", symbol: "BTCUSDT", name: "Bitcoin / USDT", type: "spot", initial: 65000, vol: 0.0025, digits: 2 },
-        { id: "ETHUSDT", symbol: "ETHUSDT", name: "Ethereum / USDT", type: "spot", initial: 3200, vol: 0.0032, digits: 2 },
-        { id: "SOLUSDT", symbol: "SOLUSDT", name: "Solana / USDT", type: "spot", initial: 145, vol: 0.005, digits: 3 },
-        { id: "XRPUSDT", symbol: "XRPUSDT", name: "XRP / USDT", type: "spot", initial: 0.62, vol: 0.0045, digits: 5 },
-        { id: "BTC-PERP", symbol: "BTCUSDT", name: "BTC 永续", type: "futures", initial: 65000, vol: 0.0025, digits: 2 },
-        { id: "ETH-PERP", symbol: "ETHUSDT", name: "ETH 永续", type: "futures", initial: 3200, vol: 0.0032, digits: 2 },
-        { id: "SOL-PERP", symbol: "SOLUSDT", name: "SOL 永续", type: "futures", initial: 145, vol: 0.005, digits: 3 },
+      let marketAssets = [
+        { id: "BTCUSDT", symbol: "BTCUSDT", name: "Bitcoin / USDT", type: "spot", initial: 65000, vol: 0.0025, digits: 2, venue: "binance", hot: true },
+        { id: "ETHUSDT", symbol: "ETHUSDT", name: "Ethereum / USDT", type: "spot", initial: 3200, vol: 0.0032, digits: 2, venue: "binance", hot: true },
+        { id: "SOLUSDT", symbol: "SOLUSDT", name: "Solana / USDT", type: "spot", initial: 145, vol: 0.005, digits: 3, venue: "binance", hot: true },
+        { id: "XRPUSDT", symbol: "XRPUSDT", name: "XRP / USDT", type: "spot", initial: 0.62, vol: 0.0045, digits: 5, venue: "binance", hot: true },
+        { id: "BTC-PERP", symbol: "BTCUSDT", name: "BTC 永续", type: "futures", initial: 65000, vol: 0.0025, digits: 2, venue: "binance", hot: true },
+        { id: "ETH-PERP", symbol: "ETHUSDT", name: "ETH 永续", type: "futures", initial: 3200, vol: 0.0032, digits: 2, venue: "binance", hot: true },
+        { id: "SOL-PERP", symbol: "SOLUSDT", name: "SOL 永续", type: "futures", initial: 145, vol: 0.005, digits: 3, venue: "binance", hot: true },
         { id: "EURUSD", symbol: null, name: "EUR / USD", type: "forex", initial: 1.08, vol: 0.0008, digits: 5 },
         { id: "USDJPY", symbol: null, name: "USD / JPY", type: "forex", initial: 150, vol: 0.0007, digits: 3 },
         { id: "GBPUSD", symbol: null, name: "GBP / USD", type: "forex", initial: 1.27, vol: 0.001, digits: 5 }
@@ -458,6 +482,66 @@
         { title: "业绩超预期", text: "一家消费品牌公布亮眼季报，市场开始重新评估估值。", target: "MORI", impact: 0.05 },
         { title: "储能突破", text: "新型电池测试数据公布，能源板块成交明显活跃。", target: "LUMA", impact: 0.06 }
       ];
+      const stockSymbols = [
+        "AAPL","MSFT","NVDA","AMZN","GOOGL","META","BRK.B","AVGO","TSLA","LLY",
+        "WMT","JPM","V","XOM","MA","ORCL","COST","JNJ","HD","ABBV","BAC","PG",
+        "NFLX","CVX","KO","PLTR","GE","AMD","CSCO","TMUS","PM","IBM","CAT","WFC",
+        "CRM","UNH","MS","GS","AXP","RTX","MCD","ABT","PEP","LIN","TMO","DIS",
+        "INTU","UBER","NOW","TXN","QCOM","AMGN","ISRG","NEE","BKNG","LOW","SCHW",
+        "BLK","SPGI","HON","PFE","C","BA","AMAT","ANET","ADBE","VZ","GEV","T",
+        "DE","COP","DHR","BSX","TJX","PGR","SYK","UNP","ETN","MU","LRCX","ADI",
+        "GILD","MDT","PANW","KLAC","CB","MMC","VRTX","SBUX","CME","SO","APH",
+        "CRWD","ICE","PLD","MO","BMY","DUK","SHW","NEM","INTC","F","GM","PYPL",
+        "SHOP","ARM","COIN","HOOD","SNOW","MSTR","SMCI","DELL","FDX","UPS",
+        "TGT","NKE","LULU","MRK","CVS","CMCSA","CHTR","CL","ELV","MDLZ"
+      ];
+      const stockNames = {
+        AAPL:"Apple",MSFT:"Microsoft",NVDA:"NVIDIA",AMZN:"Amazon",GOOGL:"Alphabet",META:"Meta",TSLA:"Tesla",
+        LLY:"Eli Lilly",WMT:"Walmart",JPM:"JPMorgan",V:"Visa",XOM:"Exxon Mobil",MA:"Mastercard",
+        ORCL:"Oracle",COST:"Costco",JNJ:"Johnson & Johnson",HD:"Home Depot",ABBV:"AbbVie",BAC:"Bank of America",
+        PG:"Procter & Gamble",NFLX:"Netflix",CVX:"Chevron",KO:"Coca-Cola",PLTR:"Palantir",GE:"GE Aerospace",
+        AMD:"AMD",CSCO:"Cisco",CRM:"Salesforce",UNH:"UnitedHealth",MS:"Morgan Stanley",GS:"Goldman Sachs",
+        ADBE:"Adobe",INTC:"Intel",PYPL:"PayPal",SHOP:"Shopify",COIN:"Coinbase",HOOD:"Robinhood"
+      };
+      const fxCurrencies = ["EUR","GBP","AUD","NZD","USD","CHF","CAD","JPY","CNY","HKD","SGD","KRW","INR","MXN","BRL","ZAR","TRY","SEK","NOK","PLN"];
+      const cryptoHotSymbols = ["BTCUSDT","ETHUSDT","OKBUSDT","SOLUSDT","DOGEUSDT","XRPUSDT","BCHUSDT","DOODUSDT","ZECUSDT","HYPEUSDT","PEPEUSDT","BNBUSDT","ADAUSDT","TRXUSDT","LINKUSDT","AVAXUSDT","SUIUSDT","TONUSDT","LTCUSDT","SHIBUSDT","DOTUSDT","NEARUSDT","APTUSDT","UNIUSDT","AAVEUSDT","TAOUSDT","WIFUSDT","ENAUSDT","FETUSDT","RENDERUSDT"];
+      const fxNames = {
+        USD:"美元",EUR:"欧元",GBP:"英镑",JPY:"日元",CHF:"瑞郎",CAD:"加元",AUD:"澳元",NZD:"纽元",
+        CNY:"人民币",HKD:"港元",SGD:"新加坡元",KRW:"韩元",INR:"印度卢比",MXN:"墨西哥比索",
+        BRL:"巴西雷亚尔",ZAR:"南非兰特",TRY:"土耳其里拉",SEK:"瑞典克朗",NOK:"挪威克朗",PLN:"波兰兹罗提"
+      };
+      const fxPairs = [];
+      for (let i = 0; i < fxCurrencies.length; i++) {
+        for (let j = i + 1; j < fxCurrencies.length; j++) {
+          const base = fxCurrencies[i];
+          const quote = fxCurrencies[j];
+          const pair = `${base}${quote}`;
+          if (fxPairs.some((item) => item.symbol === pair)) continue;
+          fxPairs.push({ base, quote, symbol: pair });
+        }
+      }
+      const stockAssets = stockSymbols.map((symbol, index) => ({
+        id: `US-${symbol}`, symbol, name: `${stockNames[symbol] || symbol} / ${symbol}`,
+        type: "stocks", initial: 18 + ((index * 7919) % 31000) / 37,
+        vol: 0.002 + (index % 9) * 0.0011, digits: 2, venue: "virtual", hot: index < 30
+      }));
+      const fxAssets = fxPairs.map(({ base, quote, symbol }) => ({
+        id: symbol, symbol, name: `${base} / ${quote}`, type: "forex",
+        initial: 1, vol: 0.001, digits: base.includes("JPY") || quote.includes("JPY") ? 3 : 5,
+        base, quote, venue: "ecb", hot: ["EURUSD","USDJPY","GBPUSD","USDCHF","USDCAD","AUDUSD","NZDUSD","EURGBP","EURJPY","GBPJPY","EURCHF","AUDJPY"].includes(symbol)
+      }));
+      marketAssets = marketAssets.concat(stockAssets, fxAssets);
+      const MARKET_DAY_MS = 24 * 60 * 60 * 1000;
+      const difficultySettings = {
+        simple: { volatility: 2.4, fee: 0.012, slip: 0.009, jump: 0.04, label: "简单 · 实际困难" },
+        hard: { volatility: 7, fee: 0.04, slip: 0.025, jump: 0.14, label: "困难 · 地狱级" }
+      };
+      const tauntOpeners = ["你太菜了", "手速挺快，方向全反", "恭喜触发学费返还", "这波操作很有勇气", "市场都替你捏把汗", "仓位管理暂时离家出走", "止损按钮今天休假了", "技术分析看了个寂寞", "恭喜解锁归零体验卡", "K线看了都摇头"];
+      const tauntLessons = ["菜就多练", "复盘别只看最后一根K线", "先把仓位缩小再来", "这次是模拟盘，吸取教训", "记得给杠杆降降温", "休息一下，别和行情赌气", "风控作业还欠一份", "把止损写进交易计划", "市场不会因为你着急就反转", "再检查一次保证金"];
+      const tauntClosers = ["下次先活下来！", "K线已经替你记住了。", "练好了再来挑战。", "本金管理比嘴硬重要。", "挑战记录已自动保存。", "稳住，别急着按复活键。", "模拟世界也要讲纪律。", "喝口水，重整旗鼓。", "赔率不会因为自信而变好。", "今天的复盘素材有了。"];
+      const liquidationTaunts = Array.from({ length: 1000 }, (_, index) =>
+        `第 ${index + 1} 条挑战：${tauntOpeners[Math.floor(index / 100)]}，${tauntLessons[Math.floor(index / 10) % 10]}；${tauntClosers[index % 10]}`
+      );
       const $ = (id) => document.getElementById(id);
       const fmtMoney = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const fmtSigned = (n) => (n > 0 ? "+" : "") + Number(n).toFixed(2) + "%";
@@ -495,7 +579,7 @@
       function newMarketGame() {
         const quotes = {};
         marketAssets.forEach((asset) => {
-          const candles = makeSeedCandles(asset.initial, asset.vol);
+          const candles = makeSeedCandles(asset.initial, asset.vol, 28);
           quotes[asset.id] = {
             price: candles[candles.length - 1].close,
             candles,
@@ -512,6 +596,9 @@
           loanPrincipal: 0,
           loanInterest: 0,
           day: 1,
+          nextDayAt: Date.now() + MARKET_DAY_MS,
+          difficulty: "simple",
+          tauntIndex: 0,
           quotes,
           trades: []
         };
@@ -533,11 +620,15 @@
           const loaded = {
             ...fresh,
             ...saved,
+            quotes: fresh.quotes,
             spotPositions: saved.spotPositions || {},
             leveragedPositions: saved.leveragedPositions || {},
             loanPrincipal: Number(saved.loanPrincipal) || 0,
             loanInterest: Number(saved.loanInterest) || 0,
-            trades: Array.isArray(saved.trades) ? saved.trades.slice(0, 100) : []
+            trades: Array.isArray(saved.trades) ? saved.trades.slice(0, 100) : [],
+            difficulty: saved.difficulty === "hard" ? "hard" : "simple",
+            tauntIndex: Number.isInteger(saved.tauntIndex) ? Math.max(0, saved.tauntIndex) % liquidationTaunts.length : 0,
+            nextDayAt: Number.isFinite(saved.nextDayAt) ? saved.nextDayAt : fresh.nextDayAt
           };
           marketAssets.forEach((asset) => { loaded.quotes[asset.id].live = false; });
           return loaded;
@@ -564,6 +655,7 @@
       let tournamentPage = 1;
       let marketSocket = null;
       let marketSocketRetry = null;
+      let marketPingTimer = null;
       let marketFallbackTimer = null;
       let marketSaveTimer = null;
       let marketSelectedId = "BTCUSDT";
@@ -571,6 +663,7 @@
       let marketInterval = "1m";
       let marketSocketAttempt = 0;
       let lastLiveMessageAt = 0;
+      let autoDayTimer = null;
 
       function newGame() {
         const prices = {};
@@ -640,9 +733,15 @@
       function aiEquity(player) { return player.cash + portfolioValue(player.positions); }
       function totalReturn(equity) { return (equity / INITIAL_CASH - 1) * 100; }
       function getMarketAsset(id = marketSelectedId) { return marketAssets.find((asset) => asset.id === id); }
-      function getMarketQuote(id = marketSelectedId) { return marketGame.quotes[id]; }
+      function getMarketQuote(id = marketSelectedId) {
+        const asset = getMarketAsset(id);
+        return asset ? marketGame.quotes[id] || ensureMarketQuote(asset) : null;
+      }
       function getMarketPrice(id = marketSelectedId) { return getMarketQuote(id).price; }
       function isLeveragedMarket(asset = getMarketAsset()) { return asset.type === "futures" || asset.type === "forex"; }
+      function currentDifficulty() {
+        return difficultySettings[marketGame.difficulty] || difficultySettings.simple;
+      }
       function marketPosition(asset = getMarketAsset()) {
         return isLeveragedMarket(asset)
           ? marketGame.leveragedPositions[asset.id]
@@ -664,10 +763,171 @@
 
       function saveMarketGame() {
         try {
-          localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketGame));
+          const { quotes, ...persistentState } = marketGame;
+          localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(persistentState));
         } catch (error) {
           console.error("保存模拟多市场存档失败。", error);
           $("marketOrderHint").textContent = "模拟账户未能保存到本机；请检查浏览器存储设置。";
+        }
+      }
+
+      function ensureMarketQuote(asset) {
+        if (!asset) return null;
+        if (marketGame.quotes[asset.id]) return marketGame.quotes[asset.id];
+        const candles = makeSeedCandles(asset.initial, asset.vol, 28);
+        const current = asset.initial;
+        const last = candles[candles.length - 1];
+        last.high = Math.max(last.high, current);
+        last.low = Math.min(last.low, current);
+        last.close = current;
+        marketGame.quotes[asset.id] = {
+          price: current,
+          candles,
+          previous: candles[candles.length - 2]?.close || current,
+          live: false,
+          historyLive: false,
+          volume: 0
+        };
+        return marketGame.quotes[asset.id];
+      }
+
+      function addExchangeSymbols(rows, type, venue, tickers) {
+        const bySymbol = new Map((tickers || []).map((ticker) => [ticker.symbol, ticker]));
+        const candidates = rows.filter((row) =>
+          row.status === "TRADING" &&
+          row.quoteAsset === "USDT" &&
+          row.isSpotTradingAllowed !== false &&
+          !row.symbol.endsWith("UPUSDT") &&
+          !row.symbol.endsWith("DOWNUSDT")
+        );
+        const assetsFromExchange = candidates.map((row) => {
+          const ticker = bySymbol.get(row.symbol);
+          const volume = Number(ticker?.quoteVolume || ticker?.turnover24h || 0);
+          const symbol = row.symbol;
+          const base = row.baseAsset || symbol.slice(0, -4);
+          const known = marketAssets.find((asset) =>
+            asset.type === "spot" && asset.symbol === symbol
+          );
+          const isPerpetual = type === "futures";
+          return {
+            id: isPerpetual ? `${base}-PERP` : symbol,
+            symbol,
+            name: `${base} / USDT`,
+            type,
+            initial: Number(ticker?.lastPrice || ticker?.last || known?.initial || 1),
+            vol: known?.vol || 0.035,
+            digits: Math.max(2, Math.min(8, Number(row.quotePrecision) || (Number(ticker?.lastPrice || ticker?.last) < 1 ? 6 : 2))),
+            venue,
+            base,
+            quoteVolume: volume,
+            hot: cryptoHotSymbols.includes(symbol)
+          };
+        });
+        const hotRank = new Map(cryptoHotSymbols.map((symbol, index) => [symbol, index]));
+        assetsFromExchange.sort((a, b) => {
+          const popularA = hotRank.has(a.symbol) ? 1 : 0;
+          const popularB = hotRank.has(b.symbol) ? 1 : 0;
+          if (popularA !== popularB) return popularB - popularA;
+          if (popularA && hotRank.get(a.symbol) !== hotRank.get(b.symbol)) return hotRank.get(a.symbol) - hotRank.get(b.symbol);
+          return b.quoteVolume - a.quoteVolume || a.symbol.localeCompare(b.symbol);
+        });
+        const keepOtherVenues = marketAssets.filter((asset) =>
+          !(["spot","futures"].includes(asset.type) && asset.venue === venue)
+        );
+        const nextSymbols = assetsFromExchange.map((asset) => {
+          ensureMarketQuote(asset);
+          return asset;
+        });
+        marketAssets = keepOtherVenues.concat(nextSymbols);
+        return assetsFromExchange.length;
+      }
+
+      async function loadExchangeCatalog(venue) {
+        const timeout = AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined;
+        const request = async (url) => {
+          const response = await fetch(url, { cache: "no-store", signal: timeout });
+          if (!response.ok) throw new Error(`交易对目录请求失败（HTTP ${response.status}）`);
+          return response.json();
+        };
+        try {
+          $("marketDataStatus").textContent = `正在读取 ${venue === "binance" ? "Binance" : "Bybit"} 挂牌目录…`;
+          if (venue === "binance") {
+            const [spotInfo, spotTickers, futuresInfo, futuresTickers] = await Promise.all([
+              request("https://api.binance.com/api/v3/exchangeInfo"),
+              request("https://api.binance.com/api/v3/ticker/24hr"),
+              request("https://fapi.binance.com/fapi/v1/exchangeInfo"),
+              request("https://fapi.binance.com/fapi/v1/ticker/24hr")
+            ]);
+            if (marketVenue !== venue) return;
+            const spotCount = addExchangeSymbols(spotInfo.symbols || [], "spot", venue, spotTickers || []);
+            const futuresCount = addExchangeSymbols(
+              (futuresInfo.symbols || []).filter((row) => row.contractType === "PERPETUAL"),
+              "futures",
+              venue,
+              futuresTickers || []
+            );
+            $("marketDataStatus").textContent = `已加载现货 ${spotCount} 种 / 永续 ${futuresCount} 种`;
+          } else {
+            const [spotData, futuresData] = await Promise.all([
+              request("https://api.bybit.com/v5/market/instruments-info?category=spot&limit=1000"),
+              request("https://api.bybit.com/v5/market/instruments-info?category=linear&limit=1000")
+            ]);
+            if (marketVenue !== venue) return;
+            const [spotTickerData, futuresTickerData] = await Promise.all([
+              request("https://api.bybit.com/v5/market/tickers?category=spot"),
+              request("https://api.bybit.com/v5/market/tickers?category=linear")
+            ]);
+            if (marketVenue !== venue) return;
+            const adapt = (items) => (items || []).map((row) => ({
+              ...row,
+              status: row.status === "Trading" ? "TRADING" : row.status,
+              baseAsset: row.baseCoin,
+              quoteAsset: row.quoteCoin,
+              quotePrecision: 6
+            }));
+            const spotCount = addExchangeSymbols(
+              adapt(spotData.result?.list), "spot", venue, spotTickerData.result?.list || []
+            );
+            const futuresRows = adapt(futuresData.result?.list)
+              .filter((row) => row.contractType === "LinearPerpetual" || row.contractType === "PERPETUAL");
+            const futuresCount = addExchangeSymbols(
+              futuresRows, "futures", venue, futuresTickerData.result?.list || []
+            );
+            $("marketDataStatus").textContent = `已加载现货 ${spotCount} 种 / 永续 ${futuresCount} 种`;
+          }
+          selectMarketOptions();
+          scheduleMarketSave();
+        } catch (error) {
+          console.warn(`无法读取 ${venue} 实时挂牌目录。`, error);
+          if (marketVenue === venue) {
+            $("marketDataStatus").textContent = "交易所目录不可用 · 可切换交易所重试";
+            $("marketDataSource").textContent = "币种清单仅来自实际挂牌接口，不会伪造市场数据";
+          }
+        }
+      }
+
+      async function loadForexReference() {
+        try {
+          const response = await fetch("https://api.frankfurter.dev/v1/latest?base=USD", { cache: "no-store" });
+          if (!response.ok) throw new Error(`外汇参考数据请求失败（HTTP ${response.status}）`);
+          const result = await response.json();
+          const usdRates = { USD: 1, ...result.rates };
+          fxAssets.forEach((asset) => {
+            if (!usdRates[asset.base] || !usdRates[asset.quote]) return;
+            const price = usdRates[asset.quote] / usdRates[asset.base];
+            const quote = ensureMarketQuote(asset);
+            quote.previous = quote.price;
+            quote.price = price;
+            quote.referenceDate = result.date;
+            quote.reference = true;
+          });
+          if (getMarketAsset()?.type === "forex") renderMarketTerminal();
+        } catch (error) {
+          console.warn("无法读取 ECB 外汇日参考数据。", error);
+          if (getMarketAsset()?.type === "forex") {
+            $("marketDataStatus").textContent = "外汇日参考数据暂不可用";
+            $("marketDataSource").textContent = "显示本机生成的模拟报价";
+          }
         }
       }
 
@@ -771,7 +1031,13 @@
         const now = new Date(candles[candles.length - 1].time);
         ctx.fillText(`${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${marketInterval}`, left, height - 16);
         ctx.textAlign = "right";
-        ctx.fillText(quote.historyLive ? "交易所 K 线" : "演示 K 线", width - right, height - 16);
+        const latestIsDemo = candles[candles.length - 1].demo;
+        const sourceLabel = quote.live && !latestIsDemo
+          ? "实时交易所 K 线"
+          : quote.historyLive
+            ? latestIsDemo ? "历史 + 演示 K 线" : "交易所历史 K 线"
+            : "演示 K 线";
+        ctx.fillText(sourceLabel, width - right, height - 16);
       }
 
       function renderMarketPositions() {
@@ -797,34 +1063,45 @@
 
       function renderMarketTerminal() {
         const asset = getMarketAsset();
+        if (!asset) return;
         const quote = getMarketQuote();
-        if (!asset || !quote) return;
+        if (!quote) return;
         const change = quote.previous ? (quote.price / quote.previous - 1) * 100 : 0;
         $("marketName").textContent = `${asset.name} · ${asset.id}`;
         $("marketLast").textContent = quote.price.toLocaleString("en-US", { minimumFractionDigits: asset.digits, maximumFractionDigits: asset.digits });
         $("marketChange").textContent = `${fmtSigned(change)} ${quote.live ? "实时" : "模拟"}`;
         $("marketChange").className = "quote-meta " + tone(change);
-        $("marketKind").textContent = asset.type === "spot" ? "现货" : asset.type === "futures" ? "模拟永续合约" : "外汇模拟";
-        $("marketOrderType").textContent = asset.type === "spot" ? "模拟现货 · 现金全额结算" : asset.type === "futures" ? "模拟永续 · 独立保证金" : "模拟外汇 · 虚拟保证金";
+        $("marketKind").textContent = asset.type === "spot" ? "模拟现货" : asset.type === "futures" ? "模拟永续合约" : asset.type === "stocks" ? "虚拟股票" : "外汇参考模拟";
+        $("marketOrderType").textContent = asset.type === "spot" ? "模拟现货 · 现金全额结算" : asset.type === "futures" ? "模拟永续 · 独立保证金" : asset.type === "forex" ? "模拟外汇 · 虚拟保证金" : "虚拟股票 · 非实时模拟价格";
         $("marketCash").textContent = fmtMoney(marketGame.cash);
         $("marketEquity").textContent = fmtMoney(marketEquity());
         $("leverageRow").hidden = !isLeveragedMarket(asset);
         $("spotActions").hidden = isLeveragedMarket(asset);
         $("futuresActions").hidden = !isLeveragedMarket(asset);
         $("marketDataSource").textContent = asset.type === "forex"
-          ? "演示报价 · 非实时"
-          : quote.live
-            ? `公开 ${marketVenue === "binance" ? "Binance" : "Bybit"} 行情 · 只读`
-            : "公开行情连接中 / 不提交交易";
+          ? quote.reference ? `ECB 日基准汇率 · ${quote.referenceDate} · 非实时盘口` : "交叉汇率演示 · 非实时"
+          : asset.type === "stocks"
+            ? "虚拟价格 · 不代表真实股票行情"
+            : quote.live
+              ? `公开 ${asset.venue === "binance" ? "Binance" : "Bybit"} 行情 · 只读`
+              : quote.historyLive
+                ? "交易所历史 K 线 · 当前未连接实时流"
+                : "实时源未连接 · 当前使用模拟演示报价";
         $("marketDataStatus").textContent = asset.type === "forex"
-          ? "离线演示"
-          : quote.live ? "● 实时连接" : "○ 等待行情 / 演示价格";
+          ? quote.reference ? `ECB 参考 · ${quote.referenceDate}` : "外汇演示"
+          : asset.type === "stocks"
+            ? "虚构模拟价格"
+            : quote.live
+              ? "● 实时连接"
+              : quote.historyLive
+                ? "○ 历史数据 · 等待实时行情"
+                : "○ 演示行情 · 实时源未连接";
         $("marketDataStatus").className = "status-pill " + (quote.live ? "positive" : "neutral");
         const qty = Math.max(0, Number($("marketQty").value) || 0);
         const notional = qty * quote.price;
-        const leverage = Number($("leverageSelect").value) || 1;
+        const leverage = clamp(Math.floor(Number($("leverageSelect").value) || 1), 1, 1000);
         $("marketNotional").textContent = fmtMoney(notional);
-        $("marketMargin").textContent = fmtMoney(isLeveragedMarket(asset) ? notional / leverage : notional);
+        $("marketMargin").textContent = fmtMoney(isLeveragedMarket(asset) ? notional / clamp(leverage, 1, 1000) : notional);
         const position = marketPosition(asset);
         if (isLeveragedMarket(asset)) {
           $("marketCloseFuture").disabled = !position;
@@ -848,20 +1125,48 @@
 
       function selectMarketOptions() {
         const currentType = $("marketTypeSelect").value;
-        const choices = marketAssets.filter((asset) => currentType === "all" || asset.type === currentType);
+        const uniqueAssets = [...new Map(marketAssets.map((asset) => [asset.id, asset])).values()];
+        const allChoices = uniqueAssets.filter((asset) =>
+          (currentType === "all" || asset.type === currentType) &&
+          (!["spot", "futures"].includes(asset.type) || asset.venue === marketVenue)
+        );
+        const choices = $("marketListMode").value === "all"
+          ? allChoices
+          : allChoices.filter((asset) => asset.hot);
+        const typeLabels = { all: "全部市场", spot: "现货", futures: "永续合约", stocks: "股票", forex: "外汇演示" };
+        Array.from($("marketTypeSelect").options).forEach((option) => {
+          const count = option.value === "all" ? allChoices.length : uniqueAssets.filter((asset) =>
+            asset.type === option.value &&
+            (!["spot", "futures"].includes(asset.type) || asset.venue === marketVenue)
+          ).length;
+          option.textContent = `${typeLabels[option.value]} (${count})`;
+        });
         const select = $("marketSelect");
+        if (!choices.length) {
+          marketSelectedId = "";
+          select.innerHTML = '<option value="">暂无符合条件的品种</option>';
+          $("marketDataStatus").textContent = "该市场暂无可用挂牌目录";
+          $("marketName").textContent = "暂无可用品种";
+          $("marketLast").textContent = "—";
+          ["marketBuy", "marketSell", "marketClose", "marketLong", "marketShort", "marketCloseFuture"].forEach((id) => {
+            $(id).disabled = true;
+          });
+          return;
+        }
         if (!choices.some((asset) => asset.id === marketSelectedId)) {
-          marketSelectedId = choices[0]?.id || marketAssets[0].id;
+          marketSelectedId = choices[0].id;
         }
         select.innerHTML = choices.map((asset) =>
-          `<option value="${asset.id}">${asset.name} · ${asset.type === "spot" ? "现货" : asset.type === "futures" ? "永续" : "外汇演示"}</option>`
+          `<option value="${asset.id}">${asset.name} · ${asset.type === "spot" ? "现货" : asset.type === "futures" ? "永续" : asset.type === "stocks" ? "股票模拟" : "外汇"}</option>`
         ).join("");
         select.value = marketSelectedId;
         renderMarketTerminal();
       }
 
       function updateMarketCandle(candle) {
-        const quote = getMarketQuote();
+        const asset = getMarketAsset();
+        const quote = ensureMarketQuote(asset);
+        if (candle.demo && asset.type === "forex") quote.reference = false;
         quote.live = !candle.demo;
         if (!candle.demo) quote.historyLive = true;
         const last = quote.candles[quote.candles.length - 1];
@@ -878,11 +1183,31 @@
         if (marginPosition && marginPosition.margin > 0 &&
             marketUnrealized(marginPosition, quote.price) <= -marginPosition.margin * 0.8) {
           const loss = marketUnrealized(marginPosition, quote.price);
-          marketGame.cash += marginPosition.margin + Math.max(loss, -marginPosition.margin);
+          const liquidationFee = Math.abs(marginPosition.qty * quote.price) * currentDifficulty().fee;
+          marketGame.cash = Math.max(0, marketGame.cash + marginPosition.margin + Math.max(loss, -marginPosition.margin) - liquidationFee);
+          showLiquidation();
           delete marketGame.leveragedPositions[marketSelectedId];
-          showToast(`${getMarketAsset().name} 触发模拟强平；真实平台规则可能不同。`);
+          saveMarketGame();
         }
         renderMarketTerminal();
+      }
+
+      function showLiquidation() {
+        const index = Number(marketGame.tauntIndex || 0) % liquidationTaunts.length;
+        $("liquidationTaunt").textContent = liquidationTaunts[index];
+        $("liquidationCounter").textContent = `原创挑战语 ${index + 1} / ${liquidationTaunts.length}`;
+        marketGame.tauntIndex = (index + 1) % liquidationTaunts.length;
+        $("liquidationModal").hidden = false;
+        $("dismissLiquidation").focus();
+        saveMarketGame();
+      }
+
+      function cycleLiquidationTaunt() {
+        const index = Number(marketGame.tauntIndex || 0) % liquidationTaunts.length;
+        $("liquidationTaunt").textContent = liquidationTaunts[index];
+        $("liquidationCounter").textContent = `原创挑战语 ${index + 1} / ${liquidationTaunts.length}`;
+        marketGame.tauntIndex = (index + 1) % liquidationTaunts.length;
+        saveMarketGame();
       }
 
       function handleLiveMessage(raw) {
@@ -932,9 +1257,13 @@
         const selected = marketSelectedId;
         const intervalMap = { "1m": "1m", "5m": "5m", "15m": "15m" };
         const symbol = asset.symbol;
+        const intervalValue = interval === "1m" ? "1" : interval === "5m" ? "5" : "15";
+        const category = asset.type === "futures" ? "linear" : "spot";
         const url = venue === "binance"
-          ? `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
-          : `https://api.bybit.com/v5/market/kline?category=spot&symbol=${symbol}&interval=${interval === "1m" ? "1" : interval === "5m" ? "5" : "15"}&limit=100`;
+          ? asset.type === "futures"
+            ? `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
+            : `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
+          : `https://api.bybit.com/v5/market/kline?category=${category}&symbol=${symbol}&interval=${intervalValue}&limit=100`;
         try {
           const response = await fetch(url, { cache: "no-store" });
           if (!response.ok) throw new Error(`历史行情请求失败（HTTP ${response.status}）`);
@@ -968,6 +1297,8 @@
       function closeMarketSocket() {
         clearTimeout(marketSocketRetry);
         marketSocketRetry = null;
+        clearInterval(marketPingTimer);
+        marketPingTimer = null;
         if (marketSocket) {
           marketSocket.onopen = null;
           marketSocket.onmessage = null;
@@ -985,7 +1316,13 @@
           if (asset.type !== "forex" && getMarketQuote().live && Date.now() - lastLiveMessageAt < 10000) return;
           const quote = getMarketQuote();
           const previous = quote.price;
-          const next = Math.max(asset.initial * 0.15, previous * (1 + randomNormal() * asset.vol * (asset.type === "forex" ? 0.2 : 0.35)));
+          const settings = currentDifficulty();
+          const jump = Math.random() < settings.jump
+            ? (Math.random() < 0.5 ? -1 : 1) * settings.jump
+            : 0;
+          const next = Math.max(asset.initial * 0.15, previous * (
+            1 + randomNormal() * asset.vol * settings.volatility * (asset.type === "forex" ? 0.2 : 0.35) + jump
+          ));
           const span = Math.abs(next - previous) + previous * asset.vol * 0.1;
           const intervalMs = marketInterval === "15m" ? 900000 : marketInterval === "5m" ? 300000 : 60000;
           const time = Math.floor(Date.now() / intervalMs) * intervalMs;
@@ -1005,9 +1342,15 @@
         closeMarketSocket();
         clearInterval(marketFallbackTimer);
         const asset = getMarketAsset();
-        if (asset.type === "forex") {
+        if (!asset) {
+          $("marketDataStatus").textContent = "请先选择有挂牌品种的市场";
+          return;
+        }
+        if (asset.type === "forex" || asset.type === "stocks") {
           $("marketDataStatus").textContent = "离线演示";
-          $("marketDataSource").textContent = "外汇价格为程序演示值，非实时数据";
+          $("marketDataSource").textContent = asset.type === "forex"
+            ? "外汇价格为日参考或程序演示值，非实时数据"
+            : "虚拟股票价格为程序生成的演示值，非真实行情";
           startMarketFallback();
           return;
         }
@@ -1019,8 +1362,10 @@
         const interval = marketInterval;
         const symbol = asset.symbol.toLowerCase();
         const url = marketVenue === "binance"
-          ? `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`
-          : "wss://stream.bybit.com/v5/public/spot";
+          ? asset.type === "futures"
+            ? `wss://fstream.binance.com/ws/${symbol}@kline_${interval}`
+            : `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`
+          : `wss://stream.bybit.com/v5/public/${asset.type === "futures" ? "linear" : "spot"}`;
         try {
           const socket = new WebSocket(url);
           marketSocket = socket;
@@ -1031,6 +1376,9 @@
             socket.onopen = () => {
               marketSocketAttempt = 0;
               socket.send(JSON.stringify({ op: "subscribe", args: [`kline.${interval === "1m" ? "1" : interval === "5m" ? "5" : "15"}.${asset.symbol}`] }));
+              marketPingTimer = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ op: "ping" }));
+              }, 20000);
             };
           }
           socket.onmessage = (event) => handleLiveMessage(event.data);
@@ -1040,6 +1388,8 @@
           };
           socket.onclose = () => {
             if (marketSocket !== socket) return;
+            clearInterval(marketPingTimer);
+            marketPingTimer = null;
             marketSocket = null;
             $("marketDataStatus").textContent = "行情断线 · 正在重连";
             const delay = Math.min(30000, 1000 * (2 ** Math.min(marketSocketAttempt++, 5)));
@@ -1057,11 +1407,13 @@
 
       function openLeveragedPosition(direction) {
         const asset = getMarketAsset();
-        const price = getMarketPrice();
+        if (!asset) return;
+        const price = getMarketPrice() * (1 + direction * currentDifficulty().slip);
         const qty = Number($("marketQty").value);
         const leverage = Number($("leverageSelect").value);
-        if (!isLeveragedMarket(asset) || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(leverage)) {
-          $("marketOrderHint").textContent = "请输入有效数量并选择杠杆倍数。";
+        if (!isLeveragedMarket(asset) || !Number.isFinite(qty) || qty <= 0 ||
+            !Number.isInteger(leverage) || leverage < 1 || leverage > 1000) {
+          $("marketOrderHint").textContent = "请输入有效数量，并选择 1–1000 的整数杠杆。";
           return;
         }
         const existing = marketGame.leveragedPositions[asset.id];
@@ -1071,8 +1423,9 @@
         }
         const signedQty = qty * direction;
         const margin = Math.abs(qty * price) / leverage;
-        if (margin > marketGame.cash) {
-          $("marketOrderHint").textContent = `模拟可用余额不足，需要保证金 ${fmtMoney(margin)}。`;
+        const fee = Math.abs(qty * price) * currentDifficulty().fee;
+        if (margin + fee > marketGame.cash) {
+          $("marketOrderHint").textContent = `模拟可用余额不足，需要保证金与费用 ${fmtMoney(margin + fee)}。`;
           return;
         }
         if (existing) {
@@ -1083,43 +1436,49 @@
         } else {
           marketGame.leveragedPositions[asset.id] = { qty: signedQty, avg: price, margin, leverage };
         }
-        marketGame.cash -= margin;
+        marketGame.cash -= margin + fee;
         marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: direction > 0 ? "模拟开多" : "模拟开空", qty, price });
         marketGame.trades = marketGame.trades.slice(0, 100);
-        $("marketOrderHint").textContent = `已模拟${direction > 0 ? "开多" : "开空"} ${qty}，占用保证金 ${fmtMoney(margin)}。`;
+        $("marketOrderHint").textContent = `已模拟${direction > 0 ? "开多" : "开空"} ${qty}，保证金 ${fmtMoney(margin)}，费用 ${fmtMoney(fee)}。`;
         renderMarketTerminal();
         saveMarketGame();
       }
 
       function closeLeveragedPosition() {
         const asset = getMarketAsset();
+        if (!asset) return;
         const position = marketGame.leveragedPositions[asset.id];
         if (!position) return;
-        const pnl = marketUnrealized(position, getMarketPrice());
-        marketGame.cash += position.margin + Math.max(pnl, -position.margin);
-        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟平仓", qty: Math.abs(position.qty), price: getMarketPrice() });
+        const markPrice = getMarketPrice();
+        const executionPrice = markPrice * (1 - Math.sign(position.qty) * currentDifficulty().slip);
+        const pnl = (executionPrice - position.avg) * position.qty;
+        const fee = Math.abs(position.qty * executionPrice) * currentDifficulty().fee;
+        marketGame.cash += position.margin + Math.max(pnl, -position.margin) - fee;
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟平仓", qty: Math.abs(position.qty), price: executionPrice });
         marketGame.trades = marketGame.trades.slice(0, 100);
         delete marketGame.leveragedPositions[asset.id];
-        $("marketOrderHint").textContent = `模拟平仓完成，已实现盈亏 ${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}。`;
+        $("marketOrderHint").textContent = `模拟平仓完成，已实现盈亏 ${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}，费用 ${fmtMoney(fee)}。`;
         renderMarketTerminal();
         saveMarketGame();
       }
 
       function tradeMarketSpot(side) {
         const asset = getMarketAsset();
+        if (!asset) return;
         const quote = getMarketQuote();
         if (asset.type !== "spot") return;
         const qty = Number($("marketQty").value);
-        const price = quote.price;
         if (!Number.isFinite(qty) || qty <= 0) {
           $("marketOrderHint").textContent = "请输入大于 0 的有效数量。";
           return;
         }
+        const price = quote.price * (side === "买入" ? 1 + currentDifficulty().slip : 1 - currentDifficulty().slip);
+        const fee = qty * price * currentDifficulty().fee;
         const position = marketGame.spotPositions[asset.id];
         if (side === "买入") {
-          const cost = qty * price;
+          const cost = qty * price + fee;
           if (cost > marketGame.cash) {
-            $("marketOrderHint").textContent = `模拟余额不足，需要 ${fmtMoney(cost)}。`;
+            $("marketOrderHint").textContent = `模拟余额不足，需要 ${fmtMoney(cost)}（含费用）。`;
             return;
           }
           const oldQty = position?.qty || 0;
@@ -1135,25 +1494,28 @@
           position.qty -= qty;
           if (position.qty < 1e-10) delete marketGame.spotPositions[asset.id];
         }
-        marketGame.cash += (side === "买入" ? -1 : 1) * qty * price;
+        marketGame.cash += side === "买入" ? -(qty * price + fee) : qty * price - fee;
         marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: `模拟${side}`, qty, price });
         marketGame.trades = marketGame.trades.slice(0, 100);
-        $("marketOrderHint").textContent = `模拟${side}${asset.name} ${qty.toFixed(6)}，未向交易所提交订单。`;
+        $("marketOrderHint").textContent = `模拟${side}${asset.name} ${qty.toFixed(6)}，费用 ${fmtMoney(fee)}；未向交易所提交订单。`;
         renderMarketTerminal();
         saveMarketGame();
       }
 
       function closeMarketSpot() {
         const asset = getMarketAsset();
+        if (!asset) return;
         const position = marketGame.spotPositions[asset.id];
         if (!position || asset.type !== "spot") return;
         const qty = position.qty;
-        const proceeds = qty * getMarketPrice();
+        const price = getMarketPrice() * (1 - currentDifficulty().slip);
+        const fee = qty * price * currentDifficulty().fee;
+        const proceeds = qty * price - fee;
         marketGame.cash += proceeds;
         delete marketGame.spotPositions[asset.id];
-        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟全部卖出", qty, price: getMarketPrice() });
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟全部卖出", qty, price });
         marketGame.trades = marketGame.trades.slice(0, 100);
-        $("marketOrderHint").textContent = `已模拟全部卖出 ${asset.name}，未向交易所提交订单。`;
+        $("marketOrderHint").textContent = `已模拟全部卖出 ${asset.name}，费用 ${fmtMoney(fee)}；未向交易所提交订单。`;
         renderMarketTerminal();
         saveMarketGame();
       }
@@ -1220,6 +1582,36 @@
         $("dayBadge").textContent = `第 ${state.day} 天`;
         $("orderDay").textContent = state.day;
         $("rank").textContent = "—";
+      }
+
+      function renderAutoClock() {
+        const remaining = Math.max(0, marketGame.nextDayAt - Date.now());
+        const hours = Math.floor(remaining / 3600000);
+        const minutes = Math.floor((remaining % 3600000) / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        $("autoClock").textContent = `24h 自动 · ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function checkAutomaticDay() {
+        let changed = false;
+        const now = Date.now();
+        while (now >= marketGame.nextDayAt) {
+          marketGame.nextDayAt += MARKET_DAY_MS;
+          advanceDay({ silent: true, render: false });
+          changed = true;
+        }
+        if (changed) {
+          render();
+          renderMarketTerminal();
+          saveMarketGame();
+        }
+        renderAutoClock();
+      }
+
+      function startAutomaticDayClock() {
+        clearInterval(autoDayTimer);
+        checkAutomaticDay();
+        autoDayTimer = setInterval(checkAutomaticDay, 1000);
       }
 
       function renderQuote() {
@@ -1463,7 +1855,7 @@
         return null;
       }
 
-      function advanceDay() {
+      function advanceDay({ silent = false, render: shouldRender = true } = {}) {
         state.day += 1;
         marketGame.day = state.day;
         if (marketGame.loanPrincipal > 0) marketGame.loanInterest += marketGame.loanPrincipal * 0.0003;
@@ -1500,10 +1892,12 @@
         }
         const aiAction = state.ai.map((player) => updateAi(player, marketMoves)).filter(Boolean);
         if (aiAction.length) addFeed(aiAction[Math.floor(Math.random() * aiAction.length)], "trade");
-        render();
-        renderMarketTerminal();
-        saveMarketGame();
-        showToast(`已进入第 ${state.day} 天 · ${state.date}`);
+        if (shouldRender) {
+          render();
+          renderMarketTerminal();
+          saveMarketGame();
+        }
+        if (!silent) showToast(`已进入第 ${state.day} 天 · ${state.date}`);
       }
 
       function resetGame() {
@@ -1533,7 +1927,6 @@
       $("orderQty").addEventListener("input", syncOrder);
       $("buyBtn").addEventListener("click", () => trade("买入"));
       $("sellBtn").addEventListener("click", () => trade("卖出"));
-      $("nextDay").addEventListener("click", advanceDay);
       $("resetGame").addEventListener("click", resetGame);
       $("assetList").addEventListener("click", (event) => {
         const row = event.target.closest("[data-asset]");
@@ -1554,16 +1947,33 @@
         selectMarketOptions();
         connectMarketFeed();
       });
+      $("marketListMode").addEventListener("change", selectMarketOptions);
       $("marketSelect").addEventListener("change", (event) => {
         marketSelectedId = event.target.value;
         const asset = getMarketAsset();
+        if (!asset) return;
         $("marketQty").value = asset.type === "forex" ? "1000" : "0.001";
         connectMarketFeed();
         renderMarketTerminal();
       });
       $("venueSelect").addEventListener("change", (event) => {
         marketVenue = event.target.value;
+        marketSelectedId = "";
+        selectMarketOptions();
+        loadExchangeCatalog(marketVenue);
         connectMarketFeed();
+      });
+      $("difficultySelect").value = marketGame.difficulty;
+      $("difficultySelect").addEventListener("change", (event) => {
+        marketGame.difficulty = event.target.value === "hard" ? "hard" : "simple";
+        renderMarketTerminal();
+        saveMarketGame();
+        showToast(`已切换至${currentDifficulty().label}模式。`);
+      });
+      $("nextTaunt").addEventListener("click", cycleLiquidationTaunt);
+      $("dismissLiquidation").addEventListener("click", () => { $("liquidationModal").hidden = true; });
+      $("liquidationModal").addEventListener("click", (event) => {
+        if (event.target === $("liquidationModal")) $("liquidationModal").hidden = true;
       });
       $("intervalSelect").addEventListener("change", (event) => {
         marketInterval = event.target.value;
@@ -1604,6 +2014,9 @@
       selectMarketOptions();
       render();
       renderMarketTerminal();
+      startAutomaticDayClock();
+      loadExchangeCatalog(marketVenue);
+      loadForexReference();
       connectMarketFeed();
     })();
   </script>
