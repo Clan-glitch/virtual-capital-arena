@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "virtual-capital-arena-v2";
+const CACHE_NAME = "virtual-capital-arena-v3";
 const BASE_URL = self.registration.scope;
 const APP_SHELL = ["index.html", "ai-shareholder-arena.html", "manifest.webmanifest", "icon.svg"]
   .map((path) => new URL(path, BASE_URL).href);

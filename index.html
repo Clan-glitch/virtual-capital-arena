@@ -146,7 +146,28 @@
     .status-pill { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; background: #0c1421; }
     .terminal-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px 14px; }
     .terminal-last { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .candle-wrap { height: 300px; margin: -2px -4px 0; }
+    .chart-panel { display: grid; gap: 4px; min-width: 0; }
+    .candle-wrap { position: relative; height: 270px; margin: -2px -4px 0; }
+    .volume-wrap { height: 92px; margin: 0 -4px; }
+    .indicator-wrap { height: 116px; margin: 0 -4px; }
+    .chart-tooltip { position: absolute; z-index: 2; top: 8px; left: 8px; max-width: min(320px, calc(100% - 16px)); padding: 9px 11px; border: 1px solid #344562; border-radius: 9px; color: #dce7f8; background: #0a111eeF; box-shadow: 0 8px 20px #0006; font-size: 10px; line-height: 1.65; white-space: pre-line; pointer-events: none; }
+    .chart-tooltip[hidden] { display: none; }
+    .chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .chart-toolbar label { display: flex; align-items: center; gap: 6px; }
+    .chart-toolbar .field { width: auto; min-width: 120px; min-height: 34px; padding: 0 9px; font-size: 11px; }
+    .market-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .market-metric { min-width: 0; padding: 9px 10px; border: 1px solid #202b3e; border-radius: 9px; background: #0d1421; }
+    .market-metric span { display: block; color: var(--muted); font-size: 10px; }
+    .market-metric strong { display: block; overflow: hidden; margin-top: 5px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .depth-card { display: grid; gap: 7px; padding: 12px; border: 1px solid #202b3e; border-radius: 12px; background: #0d1421; }
+    .depth-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .depth-wrap { height: 150px; }
+    .depth-book { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .depth-side { display: grid; gap: 4px; min-width: 0; }
+    .depth-row { display: flex; justify-content: space-between; gap: 6px; overflow: hidden; color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .depth-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .depth-row .bid { color: var(--green); }
+    .depth-row .ask { color: var(--red); }
     .terminal-trade-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, .9fr); gap: 14px; }
     .market-order { display: grid; gap: 11px; padding: 14px; border: 1px solid #202b3e; border-radius: 13px; background: #0d1421; }
     .order-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
@@ -175,7 +196,7 @@
     .modal-card h2 { margin-top: 8px; font-size: 20px; }
     .modal-taunt { min-height: 60px; margin: 18px 0 8px; color: #ffabb7; font-size: 19px; font-weight: 750; line-height: 1.5; }
     .modal-counter { color: var(--muted); font-size: 11px; }
-    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+    .modal-actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 18px 0; }
     @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 980px) {
       .app { padding: 17px; }
@@ -193,7 +214,11 @@
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .stat { min-height: 83px; }
       .chart-wrap { height: 215px; }
-      .candle-wrap { height: 240px; }
+      .candle-wrap { height: 225px; }
+      .volume-wrap { height: 78px; }
+      .indicator-wrap { height: 100px; }
+      .market-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .depth-wrap { height: 125px; }
       .terminal-trade-grid { grid-template-columns: 1fr; }
       .terminal-toolbar .field { flex: 1 1 calc(50% - 8px); min-width: 0; min-height: 44px; }
       .field { min-height: 46px; font-size: 16px; }
@@ -272,8 +297,19 @@
             <select id="marketSelect" class="field" aria-label="选择交易市场"></select>
             <select id="intervalSelect" class="field" aria-label="K线周期">
               <option value="1m">1 分钟</option>
+              <option value="3m">3 分钟</option>
               <option value="5m">5 分钟</option>
               <option value="15m">15 分钟</option>
+              <option value="30m">30 分钟</option>
+              <option value="1h">1 小时</option>
+              <option value="2h">2 小时</option>
+              <option value="4h">4 小时</option>
+              <option value="6h">6 小时</option>
+              <option value="12h">12 小时</option>
+              <option value="1d">1 天</option>
+              <option value="1w">1 周</option>
+              <option value="1M">1 月</option>
+              <option value="1y">1 年</option>
             </select>
             <select id="marketTypeSelect" class="field" aria-label="按市场类型筛选">
               <option value="all">全部市场</option>
@@ -301,7 +337,43 @@
             <span id="marketLast" class="terminal-last">$—</span>
             <span id="marketChange" class="quote-meta">—</span>
           </div>
-          <div class="candle-wrap"><canvas id="candleChart" aria-label="实时虚拟市场 K 线图"></canvas></div>
+          <div class="chart-toolbar" aria-label="K线指标设置">
+            <label>主图指标
+              <select id="overlaySelect" class="field" aria-label="主图指标">
+                <option value="sma">SMA 20</option>
+                <option value="ema">EMA 20</option>
+                <option value="bollinger">布林带 20</option>
+                <option value="none">无</option>
+              </select>
+            </label>
+            <label>副图指标
+              <select id="indicatorSelect" class="field" aria-label="副图指标">
+                <option value="volume">成交量</option>
+                <option value="rsi">RSI 14</option>
+                <option value="macd">MACD 12/26/9</option>
+                <option value="none">关闭</option>
+              </select>
+            </label>
+            <span class="section-note">技术指标仅供游戏练习；公开行情只读</span>
+          </div>
+          <div class="chart-panel">
+            <div class="candle-wrap"><canvas id="candleChart" aria-label="市场 K 线图，悬停查看 OHLC、涨跌、振幅和成交量"></canvas><div id="chartTooltip" class="chart-tooltip" hidden></div></div>
+            <div id="volumePanel" class="volume-wrap"><canvas id="volumeChart" aria-label="每根 K 线成交量与成交额"></canvas></div>
+            <div id="indicatorPanel" class="indicator-wrap"><canvas id="indicatorChart" aria-label="所选技术副图指标"></canvas></div>
+          </div>
+          <div class="market-metrics" aria-label="实时交易指标">
+            <div class="market-metric"><span>当前 K 线成交量</span><strong id="currentVolume">—</strong></div>
+            <div class="market-metric"><span>当前 K 线成交额</span><strong id="currentTurnover">—</strong></div>
+            <div class="market-metric"><span id="fundingLabel">资金费率 / 模拟指标</span><strong id="fundingRate">—</strong></div>
+            <div class="market-metric"><span id="riskMetricLabel">持仓/价差指标</span><strong id="riskMetricValue">—</strong></div>
+          </div>
+          <div class="risk-note">游戏模拟每 8 小时结算一次：费率为正时多方付给空方，为负时反向；参考 OKX 公开永续合约说明，但费率为本地随机模拟，不代表 OKX 或真实合约规则。<a href="https://www.okx.com/help/iv-introduction-to-perpetual-swap-funding-fee" target="_blank" rel="noopener noreferrer">OKX 规则说明</a></div>
+          <section class="depth-card" aria-label="公开订单簿深度">
+            <div class="depth-heading"><h2>订单簿 / 深度</h2><span id="depthStatus" class="section-note">读取公开盘口…</span></div>
+            <div class="depth-wrap"><canvas id="depthChart" aria-label="公开订单簿累计买卖深度图"></canvas></div>
+            <div id="depthBook" class="depth-book"></div>
+            <div class="risk-note">只读公开盘口快照，约每 5 秒更新；这里的下单仍是本地模拟，不会提交至交易所。</div>
+          </section>
           <div class="terminal-trade-grid">
             <div class="market-order">
               <div class="card-heading">
@@ -395,7 +467,7 @@
             <button id="borrowBtn" class="button">模拟借入</button>
             <button id="repayBtn" class="button">模拟还款</button>
           </div>
-          <div id="loanHint" class="risk-note">模拟年化利率 10.95%，按推进的游戏日计息；借款不计入净资产。</div>
+          <div id="loanHint" class="risk-note">模拟年化利率 50%，按推进的游戏日计息；借款不计入净资产。</div>
         </section>
 
         <section class="card">
@@ -433,11 +505,10 @@
   <div id="liquidationModal" class="modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="liquidationTitle">
     <div class="modal-card">
       <div class="modal-emoji" aria-hidden="true">💥</div>
-      <h2 id="liquidationTitle">模拟爆仓</h2>
+      <h2 id="liquidationTitle">你爆仓了</h2>
       <p id="liquidationTaunt" class="modal-taunt">你太菜了，菜就多练！</p>
-      <p id="liquidationCounter" class="modal-counter"></p>
-      <div class="modal-actions"><button id="nextTaunt" class="button">再来一句</button><button id="dismissLiquidation" class="button primary">继续练习</button></div>
-      <p class="risk-note">仅为游戏模拟提示；不会影响任何真实账户或资金。</p>
+      <div class="modal-actions"><button id="dismissLiquidation" class="button primary">继续练习</button></div>
+      <p class="risk-note">游戏内风险提示，不影响任何真实账户或资金。</p>
     </div>
   </div>
 
@@ -450,13 +521,13 @@
       const INITIAL_CASH = 100000;
       const MARKET_INITIAL_CASH = 100000;
       let marketAssets = [
-        { id: "BTCUSDT", symbol: "BTCUSDT", name: "Bitcoin / USDT", type: "spot", initial: 65000, vol: 0.0025, digits: 2, venue: "binance", hot: true },
-        { id: "ETHUSDT", symbol: "ETHUSDT", name: "Ethereum / USDT", type: "spot", initial: 3200, vol: 0.0032, digits: 2, venue: "binance", hot: true },
-        { id: "SOLUSDT", symbol: "SOLUSDT", name: "Solana / USDT", type: "spot", initial: 145, vol: 0.005, digits: 3, venue: "binance", hot: true },
-        { id: "XRPUSDT", symbol: "XRPUSDT", name: "XRP / USDT", type: "spot", initial: 0.62, vol: 0.0045, digits: 5, venue: "binance", hot: true },
-        { id: "BTC-PERP", symbol: "BTCUSDT", name: "BTC 永续", type: "futures", initial: 65000, vol: 0.0025, digits: 2, venue: "binance", hot: true },
-        { id: "ETH-PERP", symbol: "ETHUSDT", name: "ETH 永续", type: "futures", initial: 3200, vol: 0.0032, digits: 2, venue: "binance", hot: true },
-        { id: "SOL-PERP", symbol: "SOLUSDT", name: "SOL 永续", type: "futures", initial: 145, vol: 0.005, digits: 3, venue: "binance", hot: true },
+        { id: "BTCUSDT", symbol: "BTCUSDT", name: "Bitcoin / USDT", type: "spot", initial: 65000, vol: 0.0025, digits: 2, quote: "USDT", venue: "binance", hot: true },
+        { id: "ETHUSDT", symbol: "ETHUSDT", name: "Ethereum / USDT", type: "spot", initial: 3200, vol: 0.0032, digits: 2, quote: "USDT", venue: "binance", hot: true },
+        { id: "SOLUSDT", symbol: "SOLUSDT", name: "Solana / USDT", type: "spot", initial: 145, vol: 0.005, digits: 3, quote: "USDT", venue: "binance", hot: true },
+        { id: "XRPUSDT", symbol: "XRPUSDT", name: "XRP / USDT", type: "spot", initial: 0.62, vol: 0.0045, digits: 5, quote: "USDT", venue: "binance", hot: true },
+        { id: "BTC-PERP", symbol: "BTCUSDT", name: "BTC 永续", type: "futures", initial: 65000, vol: 0.0025, digits: 2, quote: "USDT", venue: "binance", hot: true },
+        { id: "ETH-PERP", symbol: "ETHUSDT", name: "ETH 永续", type: "futures", initial: 3200, vol: 0.0032, digits: 2, quote: "USDT", venue: "binance", hot: true },
+        { id: "SOL-PERP", symbol: "SOLUSDT", name: "SOL 永续", type: "futures", initial: 145, vol: 0.005, digits: 3, quote: "USDT", venue: "binance", hot: true },
         { id: "EURUSD", symbol: null, name: "EUR / USD", type: "forex", initial: 1.08, vol: 0.0008, digits: 5 },
         { id: "USDJPY", symbol: null, name: "USD / JPY", type: "forex", initial: 150, vol: 0.0007, digits: 3 },
         { id: "GBPUSD", symbol: null, name: "GBP / USD", type: "forex", initial: 1.27, vol: 0.001, digits: 5 }
@@ -532,16 +603,42 @@
       }));
       marketAssets = marketAssets.concat(stockAssets, fxAssets);
       const MARKET_DAY_MS = 24 * 60 * 60 * 1000;
+      const LOAN_APR = 0.5;
+      const FUNDING_INTERVAL_MS = 8 * 60 * 60 * 1000;
+      const intervalSettings = {
+        "1m": { binance: "1m", bybit: "1", ms: 60000 },
+        "3m": { binance: "3m", bybit: "3", ms: 180000 },
+        "5m": { binance: "5m", bybit: "5", ms: 300000 },
+        "15m": { binance: "15m", bybit: "15", ms: 900000 },
+        "30m": { binance: "30m", bybit: "30", ms: 1800000 },
+        "1h": { binance: "1h", bybit: "60", ms: 3600000 },
+        "2h": { binance: "2h", bybit: "120", ms: 7200000 },
+        "4h": { binance: "4h", bybit: "240", ms: 14400000 },
+        "6h": { binance: "6h", bybit: "360", ms: 21600000 },
+        "12h": { binance: "12h", bybit: "720", ms: 43200000 },
+        "1d": { binance: "1d", bybit: "D", ms: 86400000 },
+        "1w": { binance: "1w", bybit: "W", ms: 604800000 },
+        "1M": { binance: "1M", bybit: "M", ms: 2592000000 },
+        "1y": { binance: "1M", bybit: "M", ms: 31536000000 }
+      };
       const difficultySettings = {
         simple: { volatility: 2.4, fee: 0.012, slip: 0.009, jump: 0.04, label: "简单" },
         hard: { volatility: 7, fee: 0.04, slip: 0.025, jump: 0.14, label: "困难" }
       };
-      const tauntOpeners = ["你太菜了", "手速挺快，方向全反", "恭喜触发学费返还", "这波操作很有勇气", "市场都替你捏把汗", "仓位管理暂时离家出走", "止损按钮今天休假了", "技术分析看了个寂寞", "恭喜解锁归零体验卡", "K线看了都摇头"];
-      const tauntLessons = ["菜就多练", "复盘别只看最后一根K线", "先把仓位缩小再来", "这次是模拟盘，吸取教训", "记得给杠杆降降温", "休息一下，别和行情赌气", "风控作业还欠一份", "把止损写进交易计划", "市场不会因为你着急就反转", "再检查一次保证金"];
-      const tauntClosers = ["下次先活下来！", "K线已经替你记住了。", "练好了再来挑战。", "本金管理比嘴硬重要。", "挑战记录已自动保存。", "稳住，别急着按复活键。", "模拟世界也要讲纪律。", "喝口水，重整旗鼓。", "赔率不会因为自信而变好。", "今天的复盘素材有了。"];
-      const liquidationTaunts = Array.from({ length: 1000 }, (_, index) =>
-        `第 ${index + 1} 条挑战：${tauntOpeners[Math.floor(index / 100)]}，${tauntLessons[Math.floor(index / 10) % 10]}；${tauntClosers[index % 10]}`
-      );
+      const liquidationTaunts = [
+        "行情刚才打了个喷嚏，你的保证金先请了假。",
+        "这根 K 线走得很急，止损还在路上。",
+        "杠杆踩了油门，风控忘了系安全带。",
+        "本次挑战由市场友情赞助一堂仓位管理课。",
+        "你的仓位和行情，刚刚完成了一次反向奔跑。",
+        "保证金余额表示：我先下班了。",
+        "这波波动太热情，账户选择冷静一下。",
+        "复盘提示：仓位小一点，睡眠香一点。",
+        "止损没有迟到，它只是没被邀请进计划。",
+        "K 线继续向前，咱们先把风险预算找回来。",
+        "行情把难度调高了，你的保证金没收到通知。",
+        "开仓时有多自信，复盘时就有多认真。"
+      ];
       const $ = (id) => document.getElementById(id);
       const fmtMoney = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const fmtSigned = (n) => (n > 0 ? "+" : "") + Number(n).toFixed(2) + "%";
@@ -599,6 +696,11 @@
           nextDayAt: Date.now() + MARKET_DAY_MS,
           difficulty: "simple",
           tauntIndex: 0,
+          marketInterval: "1m",
+          overlayIndicator: "sma",
+          subIndicator: "volume",
+          fundingRates: {},
+          fundingNextAt: (Math.floor(Date.now() / FUNDING_INTERVAL_MS) + 1) * FUNDING_INTERVAL_MS,
           quotes,
           trades: []
         };
@@ -628,7 +730,12 @@
             trades: Array.isArray(saved.trades) ? saved.trades.slice(0, 100) : [],
             difficulty: saved.difficulty === "hard" ? "hard" : "simple",
             tauntIndex: Number.isInteger(saved.tauntIndex) ? Math.max(0, saved.tauntIndex) % liquidationTaunts.length : 0,
-            nextDayAt: Number.isFinite(saved.nextDayAt) ? saved.nextDayAt : fresh.nextDayAt
+            nextDayAt: Number.isFinite(saved.nextDayAt) ? saved.nextDayAt : fresh.nextDayAt,
+            marketInterval: intervalSettings[saved.marketInterval] ? saved.marketInterval : fresh.marketInterval,
+            overlayIndicator: ["sma", "ema", "bollinger", "none"].includes(saved.overlayIndicator) ? saved.overlayIndicator : fresh.overlayIndicator,
+            subIndicator: ["volume", "rsi", "macd", "none"].includes(saved.subIndicator) ? saved.subIndicator : fresh.subIndicator,
+            fundingRates: saved.fundingRates && typeof saved.fundingRates === "object" ? saved.fundingRates : {},
+            fundingNextAt: Number.isFinite(saved.fundingNextAt) ? saved.fundingNextAt : fresh.fundingNextAt
           };
           marketAssets.forEach((asset) => { loaded.quotes[asset.id].live = false; });
           return loaded;
@@ -660,7 +767,10 @@
       let marketSaveTimer = null;
       let marketSelectedId = "BTCUSDT";
       let marketVenue = "binance";
-      let marketInterval = "1m";
+      let marketInterval = marketGame.marketInterval;
+      let orderBookTimer = null;
+      let fundingTimer = null;
+      let currentOrderBook = null;
       let marketSocketAttempt = 0;
       let lastLiveMessageAt = 0;
       let autoDayTimer = null;
@@ -817,6 +927,7 @@
             initial: Number(ticker?.lastPrice || ticker?.last || known?.initial || 1),
             vol: known?.vol || 0.035,
             digits: Math.max(2, Math.min(8, Number(row.quotePrecision) || (Number(ticker?.lastPrice || ticker?.last) < 1 ? 6 : 2))),
+            quote: row.quoteAsset || known?.quote || "USDT",
             venue,
             base,
             quoteVolume: volume,
@@ -971,29 +1082,84 @@
         $("rankNext").disabled = tournamentPage >= pageCount;
       }
 
-      function renderCandleChart() {
-        const canvas = $("candleChart");
+      let chartView = null;
+
+      function prepareCanvas(canvas) {
         const rect = canvas.getBoundingClientRect();
-        const width = Math.max(280, rect.width);
-        const height = Math.max(180, rect.height);
+        const width = Math.max(260, rect.width);
+        const height = Math.max(70, rect.height);
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.floor(width * ratio);
         canvas.height = Math.floor(height * ratio);
         const ctx = canvas.getContext("2d");
-        ctx.scale(ratio, ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         ctx.clearRect(0, 0, width, height);
+        return { ctx, width, height };
+      }
+
+      function calculateSma(values, period) {
+        return values.map((value, index) => index + 1 < period
+          ? null
+          : values.slice(index + 1 - period, index + 1).reduce((sum, item) => sum + item, 0) / period);
+      }
+
+      function calculateEma(values, period) {
+        const multiplier = 2 / (period + 1);
+        let ema = values[0] || 0;
+        return values.map((value, index) => {
+          ema = index === 0 ? value : value * multiplier + ema * (1 - multiplier);
+          return ema;
+        });
+      }
+
+      function drawSeries(ctx, series, xFor, yFor, color, dashed = false) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash(dashed ? [4, 3] : []);
+        let drawing = false;
+        series.forEach((value, index) => {
+          if (!Number.isFinite(value)) { drawing = false; return; }
+          if (!drawing) { ctx.moveTo(xFor(index), yFor(value)); drawing = true; }
+          else ctx.lineTo(xFor(index), yFor(value));
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function renderCandleChart() {
         const quote = getMarketQuote();
+        const asset = getMarketAsset();
+        if (!quote || !asset) return;
         const candles = quote.candles.slice(-80);
+        const { ctx, width, height } = prepareCanvas($("candleChart"));
         if (!candles.length) return;
-        const left = 62, right = 12, top = 14, bottom = 25;
-        const plotW = width - left - right;
-        const plotH = height - top - bottom;
-        let min = Math.min(...candles.map((candle) => candle.low));
-        let max = Math.max(...candles.map((candle) => candle.high));
+        const left = 62, right = 12, top = 14, bottom = 20;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const highs = candles.map((candle) => candle.high);
+        const lows = candles.map((candle) => candle.low);
+        const closes = candles.map((candle) => candle.close);
+        const overlay = $("overlaySelect").value;
+        const sma = calculateSma(closes, 20);
+        const ema = calculateEma(closes, 20);
+        const deviations = closes.map((close, index) => {
+          if (index < 19) return null;
+          const values = closes.slice(index - 19, index + 1);
+          const mean = sma[index];
+          return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / 20);
+        });
+        const overlays = overlay === "sma" ? [sma] : overlay === "ema" ? [ema] : overlay === "bollinger"
+          ? [sma.map((value, index) => value === null ? null : value + 2 * deviations[index]),
+            sma.map((value, index) => value === null ? null : value - 2 * deviations[index])]
+          : [];
+        const allPrices = [...highs, ...lows, ...overlays.flat().filter(Number.isFinite)];
+        let min = Math.min(...allPrices), max = Math.max(...allPrices);
         const padding = Math.max((max - min) * 0.1, max * 0.0007);
         min -= padding;
         max += padding;
         const yFor = (value) => top + (max - value) / (max - min) * plotH;
+        const step = plotW / candles.length;
+        const xFor = (index) => left + step * (index + 0.5);
         ctx.font = "10px system-ui, sans-serif";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
@@ -1004,40 +1170,176 @@
           ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
           ctx.fillStyle = "#8190a8";
-          ctx.fillText(value.toLocaleString("en-US", { maximumFractionDigits: getMarketAsset().digits }), left - 7, y);
+          ctx.fillText(value.toLocaleString("en-US", { maximumFractionDigits: asset.digits }), left - 7, y);
         }
-        const step = plotW / candles.length;
         const bodyWidth = Math.max(2, Math.min(9, step * 0.62));
         candles.forEach((candle, index) => {
-          const x = left + step * (index + 0.5);
-          const up = candle.close >= candle.open;
-          const color = up ? "#41d6a3" : "#ff7185";
+          const x = xFor(index);
+          const color = candle.close >= candle.open ? "#41d6a3" : "#ff7185";
           ctx.strokeStyle = color;
           ctx.fillStyle = color;
           ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(x, yFor(candle.high));
-          ctx.lineTo(x, yFor(candle.low));
-          ctx.stroke();
-          const yOpen = yFor(candle.open);
-          const yClose = yFor(candle.close);
-          const bodyTop = Math.min(yOpen, yClose);
-          const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
-          ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+          ctx.beginPath(); ctx.moveTo(x, yFor(candle.high)); ctx.lineTo(x, yFor(candle.low)); ctx.stroke();
+          const yOpen = yFor(candle.open), yClose = yFor(candle.close);
+          ctx.fillRect(x - bodyWidth / 2, Math.min(yOpen, yClose), bodyWidth, Math.max(1, Math.abs(yOpen - yClose)));
         });
+        if (overlay === "sma") drawSeries(ctx, sma, xFor, yFor, "#f6c76b");
+        if (overlay === "ema") drawSeries(ctx, ema, xFor, yFor, "#70a7ff");
+        if (overlay === "bollinger") {
+          drawSeries(ctx, overlays[0], xFor, yFor, "#c29aff", true);
+          drawSeries(ctx, sma, xFor, yFor, "#f6c76b");
+          drawSeries(ctx, overlays[1], xFor, yFor, "#c29aff", true);
+        }
         ctx.fillStyle = "#73819a";
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
-        const now = new Date(candles[candles.length - 1].time);
-        ctx.fillText(`${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${marketInterval}`, left, height - 16);
-        ctx.textAlign = "right";
-        const latestIsDemo = candles[candles.length - 1].demo;
-        const sourceLabel = quote.live && !latestIsDemo
-          ? "实时交易所 K 线"
-          : quote.historyLive
-            ? latestIsDemo ? "历史 + 演示 K 线" : "交易所历史 K 线"
-            : "演示 K 线";
-        ctx.fillText(sourceLabel, width - right, height - 16);
+        const intradayInterval = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h"].includes(marketInterval);
+        const dateLabel = (time) => new Date(time).toLocaleString([], intradayInterval
+          ? { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }
+          : { year: "numeric", month: "2-digit", day: "2-digit" });
+        for (let index = 0; index < candles.length; index += Math.max(1, Math.floor(candles.length / 4))) {
+          ctx.fillText(dateLabel(candles[index].time), xFor(index) - 25, height - 14);
+        }
+        chartView = { candles, left, right, width, step, xFor };
+        renderVolumeChart(candles);
+        renderIndicatorChart(candles);
+      }
+
+      function renderVolumeChart(candles) {
+        const panel = $("volumePanel");
+        panel.hidden = $("indicatorSelect").value !== "volume";
+        if (panel.hidden) return;
+        const { ctx, width, height } = prepareCanvas($("volumeChart"));
+        const left = 62, right = 12, top = 5, bottom = 21;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const maxVolume = Math.max(1, ...candles.map((candle) => candle.volume || 0));
+        const step = plotW / candles.length, barWidth = Math.max(2, Math.min(9, step * 0.62));
+        ctx.strokeStyle = "#233047"; ctx.beginPath(); ctx.moveTo(left, height - bottom); ctx.lineTo(width - right, height - bottom); ctx.stroke();
+        candles.forEach((candle, index) => {
+          const value = candle.volume || 0;
+          const barHeight = value / maxVolume * plotH;
+          ctx.fillStyle = candle.close >= candle.open ? "#41d6a399" : "#ff718599";
+          ctx.fillRect(left + step * (index + 0.5) - barWidth / 2, height - bottom - barHeight, barWidth, barHeight);
+        });
+        const latestHasVolume = !candles[candles.length - 1].demo && ["spot", "futures"].includes(getMarketAsset()?.type);
+        ctx.fillStyle = "#8190a8"; ctx.font = "10px system-ui, sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(latestHasVolume
+          ? `成交量 (${getMarketAsset()?.symbol?.replace(/USDT$/, "") || "单位"})`
+          : "成交量（该演示行情无真实成交量）", left, top + 2);
+        ctx.textAlign = "right"; ctx.fillText(maxVolume.toLocaleString("en-US", { maximumFractionDigits: 2 }), width - right, top + 2);
+        ctx.textAlign = "left"; ctx.fillStyle = "#73819a";
+        const last = candles[candles.length - 1];
+        ctx.fillText(new Date(last.time).toLocaleString([], { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }), left, height - 14);
+        ctx.textAlign = "right"; ctx.fillText("成交额 = 成交量 × 收盘价", width - right, height - 14);
+      }
+
+      function renderIndicatorChart(candles) {
+        const panel = $("indicatorPanel"), kind = $("indicatorSelect").value;
+        panel.hidden = kind === "volume" || kind === "none";
+        if (panel.hidden) return;
+        const { ctx, width, height } = prepareCanvas($("indicatorChart"));
+        const closes = candles.map((candle) => candle.close);
+        const left = 62, right = 12, top = 14, bottom = 20;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const xFor = (index) => left + plotW * (index + 0.5) / candles.length;
+        ctx.font = "10px system-ui, sans-serif"; ctx.fillStyle = "#8190a8"; ctx.textAlign = "left";
+        if (kind === "rsi") {
+          const values = closes.map((close, index) => index ? close - closes[index - 1] : 0);
+          const rsi = values.map((_, index) => {
+            if (index < 14) return null;
+            let gains = 0, losses = 0;
+            for (let i = index - 13; i <= index; i++) {
+              gains += Math.max(0, values[i]);
+              losses += Math.max(0, -values[i]);
+            }
+            return losses === 0 ? 100 : 100 - 100 / (1 + gains / losses);
+          });
+          const yFor = (value) => top + (100 - value) / 100 * plotH;
+          [30, 50, 70].forEach((value) => {
+            ctx.strokeStyle = value === 50 ? "#233047" : "#43506a";
+            ctx.setLineDash(value === 50 ? [] : [3, 3]);
+            ctx.beginPath(); ctx.moveTo(left, yFor(value)); ctx.lineTo(width - right, yFor(value)); ctx.stroke();
+            ctx.fillText(String(value), 30, yFor(value));
+          });
+          ctx.setLineDash([]);
+          drawSeries(ctx, rsi, xFor, yFor, "#70a7ff");
+          ctx.fillStyle = "#8190a8"; ctx.fillText(`RSI 14 · ${rsi.at(-1)?.toFixed(1) || "—"}`, left, 2);
+        } else {
+          const fast = calculateEma(closes, 12), slow = calculateEma(closes, 26);
+          const macd = closes.map((_, index) => fast[index] - slow[index]);
+          const signal = calculateEma(macd, 9);
+          const histogram = macd.map((value, index) => value - signal[index]);
+          const min = Math.min(...histogram, ...macd, ...signal), max = Math.max(...histogram, ...macd, ...signal);
+          const range = Math.max(1e-12, max - min), yFor = (value) => top + (max - value) / range * plotH;
+          ctx.strokeStyle = "#43506a"; ctx.beginPath(); ctx.moveTo(left, yFor(0)); ctx.lineTo(width - right, yFor(0)); ctx.stroke();
+          histogram.forEach((value, index) => {
+            ctx.fillStyle = value >= 0 ? "#41d6a388" : "#ff718588";
+            ctx.fillRect(xFor(index) - 2, Math.min(yFor(value), yFor(0)), 4, Math.max(1, Math.abs(yFor(value) - yFor(0))));
+          });
+          drawSeries(ctx, macd, xFor, yFor, "#70a7ff");
+          drawSeries(ctx, signal, xFor, yFor, "#f6c76b");
+          ctx.fillStyle = "#8190a8"; ctx.fillText(`MACD 12/26/9 · ${macd.at(-1).toFixed(4)}`, left, 2);
+        }
+      }
+
+      function renderDepthChart() {
+        const { ctx, width, height } = prepareCanvas($("depthChart"));
+        const book = currentOrderBook;
+        if (!book) return;
+        const bids = book.bids.slice(0, 20).sort((a, b) => b[0] - a[0]);
+        const asks = book.asks.slice(0, 20).sort((a, b) => a[0] - b[0]);
+        let bidTotal = 0, askTotal = 0;
+        const bidPoints = bids.map(([price, size]) => ({ price, size: bidTotal += size }));
+        const askPoints = asks.map(([price, size]) => ({ price, size: askTotal += size }));
+        const allPrices = [...bidPoints, ...askPoints].map((point) => point.price);
+        if (!allPrices.length) return;
+        const min = Math.min(...allPrices), max = Math.max(...allPrices);
+        const maxSize = Math.max(1, bidTotal, askTotal), left = 48, right = 8, top = 12, bottom = 18;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const xFor = (price) => left + (price - min) / Math.max(max - min, 1e-12) * plotW;
+        const yFor = (size) => top + (1 - size / maxSize) * plotH;
+        ctx.strokeStyle = "#233047"; ctx.beginPath(); ctx.moveTo(left, height - bottom); ctx.lineTo(width - right, height - bottom); ctx.stroke();
+        [[bidPoints, "#41d6a3"], [askPoints, "#ff7185"]].forEach(([points, color]) => {
+          if (!points.length) return;
+          ctx.beginPath(); ctx.moveTo(xFor(points[0].price), height - bottom);
+          points.forEach((point) => ctx.lineTo(xFor(point.price), yFor(point.size)));
+          ctx.lineTo(xFor(points[points.length - 1].price), height - bottom); ctx.closePath();
+          ctx.fillStyle = color + "22"; ctx.fill(); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+        });
+        ctx.fillStyle = "#41d6a3"; ctx.font = "10px system-ui, sans-serif"; ctx.textAlign = "left";
+        ctx.fillText("买盘", left, 2); ctx.fillStyle = "#ff7185"; ctx.textAlign = "right"; ctx.fillText("卖盘", width - right, 2);
+        ctx.fillStyle = "#8190a8"; ctx.textAlign = "left"; ctx.fillText(min.toLocaleString("en-US", { maximumFractionDigits: 5 }), left, height - 14);
+        ctx.textAlign = "right"; ctx.fillText(max.toLocaleString("en-US", { maximumFractionDigits: 5 }), width - right, height - 14);
+        $("depthBook").innerHTML = ["bids", "asks"].map((side) =>
+          `<div class="depth-side">${book[side].slice(0, 4).map(([price, size]) =>
+            `<div class="depth-row"><span class="${side === "bids" ? "bid" : "ask"}">${Number(price).toLocaleString("en-US", { maximumFractionDigits: getMarketAsset()?.digits || 5 })}</span><span>${Number(size).toLocaleString("en-US", { maximumFractionDigits: 5 })}</span></div>`
+          ).join("")}</div>`
+        ).join("");
+      }
+
+      function showCandleTooltip(event) {
+        if (!chartView) return;
+        const rect = $("candleChart").getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const index = Math.floor((x - chartView.left) / chartView.step);
+        const candle = chartView.candles[index];
+        if (!candle || x < chartView.left || x > chartView.width - chartView.right) {
+          $("chartTooltip").hidden = true;
+          return;
+        }
+        const previous = chartView.candles[index - 1]?.close || candle.open;
+        const change = previous ? (candle.close / previous - 1) * 100 : 0;
+        const amplitude = candle.open ? (candle.high - candle.low) / candle.open * 100 : 0;
+        const asset = getMarketAsset();
+        const quoteUnit = asset.quote || (asset.type === "forex" ? asset.quote : "USD") || "USD";
+        const turnover = candle.volume * candle.close;
+        const date = new Date(candle.time).toLocaleString();
+        const tooltip = $("chartTooltip");
+        const volumeDetails = candle.demo || ["stocks", "forex"].includes(asset.type)
+          ? "该演示行情无真实成交量/成交额"
+          : `成交量 ${Number(candle.volume || 0).toLocaleString("en-US", { maximumFractionDigits: 6 })} ${asset.symbol?.replace(/USDT$/, "") || asset.base || "单位"}\n成交额 ${turnover.toLocaleString("en-US", { maximumFractionDigits: 4 })} ${quoteUnit}`;
+        tooltip.textContent = `${date}\n开 ${candle.open.toLocaleString("en-US", { maximumFractionDigits: asset.digits })}　高 ${candle.high.toLocaleString("en-US", { maximumFractionDigits: asset.digits })}\n低 ${candle.low.toLocaleString("en-US", { maximumFractionDigits: asset.digits })}　收 ${candle.close.toLocaleString("en-US", { maximumFractionDigits: asset.digits })}\n涨跌 ${fmtSigned(change)}　振幅 ${amplitude.toFixed(2)}%\n${volumeDetails}`;
+        tooltip.hidden = false;
       }
 
       function renderMarketPositions() {
@@ -1055,7 +1357,7 @@
           const label = isLeveragedMarket(asset) ? (position.qty > 0 ? "多" : "空") : "现货";
           return `<div class="log-row">
             <div class="log-side ${tone(pnl)}">${label}</div>
-            <div class="log-detail">${asset.name} · ${amount.toFixed(amount < 1 ? 4 : 2)} · 均价 ${fmtPrice(position.avg)}</div>
+            <div class="log-detail">${asset.name} · ${amount.toFixed(amount < 1 ? 4 : 2)} · 均价 ${fmtPrice(position.avg)}${asset.type === "futures" ? ` · 资金费 ${Number(marketGame.fundingRates[asset.id] ?? 0.0001) >= 0 ? "多方支付" : "空方支付"}` : ""}</div>
             <div class="log-total ${tone(pnl)}">${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}</div>
           </div>`;
         }).join("");
@@ -1116,11 +1418,67 @@
         }
         $("loanPrincipal").textContent = fmtMoney(marketGame.loanPrincipal);
         $("loanInterest").textContent = fmtMoney(marketGame.loanInterest);
-        $("loanHint").textContent = `模拟年化利率 10.95%，按推进的游戏日计息；借款不计入净资产。模拟可借上限 ${fmtMoney(MARKET_INITIAL_CASH * 0.5)}。`;
+        $("loanHint").textContent = `模拟年化利率 ${(LOAN_APR * 100).toFixed(0)}%，按推进的游戏日计息；借款不计入净资产。模拟可借上限 ${fmtMoney(MARKET_INITIAL_CASH * 0.5)}。`;
+        renderMarketMetrics(asset, quote, position);
         renderCandleChart();
+        renderDepthChart();
         renderMarketPositions();
         renderTournament();
         scheduleMarketSave();
+      }
+
+      function renderMarketMetrics(asset, quote, position) {
+        const candle = quote.candles.at(-1);
+        const volume = Number(candle?.volume || quote.volume || 0);
+        const unit = asset.symbol?.replace(/USDT$/, "") || asset.base || "单位";
+        const quoteUnit = asset.quote || (asset.type === "forex" ? asset.quote : "USD") || "USD";
+        $("currentVolume").textContent = `${volume.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${unit}`;
+        $("currentTurnover").textContent = `${(volume * quote.price).toLocaleString("en-US", { maximumFractionDigits: 4 })} ${quoteUnit}`;
+        if (asset.type === "forex" || asset.type === "stocks" || candle?.demo) {
+          $("currentVolume").textContent = "无真实成交量";
+          $("currentTurnover").textContent = "无真实成交额";
+        }
+        if (asset.type === "futures") {
+          const rate = Number(marketGame.fundingRates[asset.id] ?? 0.0001);
+          const remaining = Math.max(0, marketGame.fundingNextAt - Date.now());
+          const hours = Math.floor(remaining / 3600000);
+          const minutes = Math.floor((remaining % 3600000) / 60000);
+          $("fundingLabel").textContent = "模拟资金费率 / 下次结算";
+          $("fundingRate").textContent = `${(rate * 100).toFixed(4)}% · ${hours}时${minutes}分`;
+          const pnl = position ? marketUnrealized(position, quote.price) : 0;
+          const marginRatio = position?.margin ? `${(Math.max(0, -pnl) / position.margin * 100).toFixed(1)}%` : "无持仓";
+          $("riskMetricLabel").textContent = position ? "保证金亏损占比" : "杠杆/价差参考";
+          $("riskMetricValue").textContent = position ? marginRatio : `${$("leverageSelect").value || 1}× · 仅模拟`;
+        } else {
+          $("fundingLabel").textContent = "模拟借贷年化率";
+          $("fundingRate").textContent = `${(LOAN_APR * 100).toFixed(0)}%`;
+          $("riskMetricLabel").textContent = "当前周期 / 涨跌";
+          $("riskMetricValue").textContent = `${marketInterval} · ${fmtSigned(quote.previous ? (quote.price / quote.previous - 1) * 100 : 0)}`;
+        }
+      }
+
+      function aggregateYearlyCandles(monthlyCandles) {
+        const years = new Map();
+        monthlyCandles.forEach((candle) => {
+          const date = new Date(candle.time);
+          const year = date.getUTCFullYear();
+          const time = Date.UTC(year, 0, 1);
+          let aggregate = years.get(year);
+          if (!aggregate) {
+            aggregate = {
+              time, open: candle.open, high: candle.high, low: candle.low, close: candle.close,
+              volume: 0, demo: candle.demo, monthlyVolumes: {}
+            };
+            years.set(year, aggregate);
+          }
+          aggregate.high = Math.max(aggregate.high, candle.high);
+          aggregate.low = Math.min(aggregate.low, candle.low);
+          aggregate.close = candle.close;
+          aggregate.volume += Number(candle.volume || 0);
+          aggregate.monthlyVolumes[date.getUTCMonth()] = Number(candle.volume || 0);
+          aggregate.demo = aggregate.demo && candle.demo;
+        });
+        return [...years.values()].map((candle) => ({ ...candle, volume: Number(candle.volume.toPrecision(10)) }));
       }
 
       function selectMarketOptions() {
@@ -1169,16 +1527,34 @@
         if (candle.demo && asset.type === "forex") quote.reference = false;
         quote.live = !candle.demo;
         if (!candle.demo) quote.historyLive = true;
+        let nextCandle = candle;
+        if (marketInterval === "1y") {
+          const date = new Date(candle.time);
+          const yearTime = Date.UTC(date.getUTCFullYear(), 0, 1);
+          const month = date.getUTCMonth();
+          const lastYearCandle = quote.candles.find((item) => item.time === yearTime);
+          const monthlyVolumes = lastYearCandle?.monthlyVolumes || {};
+          const previousMonthVolume = Number(monthlyVolumes[month] || 0);
+          nextCandle = {
+            ...candle,
+            time: yearTime,
+            open: lastYearCandle?.open ?? candle.open,
+            high: Math.max(lastYearCandle?.high ?? candle.high, candle.high),
+            low: Math.min(lastYearCandle?.low ?? candle.low, candle.low),
+            volume: Math.max(0, (lastYearCandle?.volume || 0) - previousMonthVolume + Number(candle.volume || 0)),
+            monthlyVolumes: { ...monthlyVolumes, [month]: Number(candle.volume || 0) }
+          };
+        }
         const last = quote.candles[quote.candles.length - 1];
-        if (last && last.time === candle.time) {
-          quote.candles[quote.candles.length - 1] = { ...last, ...candle };
+        if (last && last.time === nextCandle.time) {
+          quote.candles[quote.candles.length - 1] = { ...last, ...nextCandle };
         } else {
           if (last) quote.previous = last.close;
-          quote.candles.push(candle);
+          quote.candles.push(nextCandle);
           if (quote.candles.length > 300) quote.candles.shift();
         }
-        quote.price = candle.close;
-        quote.volume = candle.volume || quote.volume;
+        quote.price = nextCandle.close;
+        quote.volume = nextCandle.volume || quote.volume;
         const marginPosition = marketGame.leveragedPositions[marketSelectedId];
         if (marginPosition && marginPosition.margin > 0 &&
             marketUnrealized(marginPosition, quote.price) <= -marginPosition.margin * 0.8) {
@@ -1193,20 +1569,12 @@
       }
 
       function showLiquidation() {
-        const index = Number(marketGame.tauntIndex || 0) % liquidationTaunts.length;
+        let index = Math.floor(Math.random() * liquidationTaunts.length);
+        if (liquidationTaunts.length > 1 && index === marketGame.tauntIndex) index = (index + 1) % liquidationTaunts.length;
         $("liquidationTaunt").textContent = liquidationTaunts[index];
-        $("liquidationCounter").textContent = `原创挑战语 ${index + 1} / ${liquidationTaunts.length}`;
-        marketGame.tauntIndex = (index + 1) % liquidationTaunts.length;
+        marketGame.tauntIndex = index;
         $("liquidationModal").hidden = false;
         $("dismissLiquidation").focus();
-        saveMarketGame();
-      }
-
-      function cycleLiquidationTaunt() {
-        const index = Number(marketGame.tauntIndex || 0) % liquidationTaunts.length;
-        $("liquidationTaunt").textContent = liquidationTaunts[index];
-        $("liquidationCounter").textContent = `原创挑战语 ${index + 1} / ${liquidationTaunts.length}`;
-        marketGame.tauntIndex = (index + 1) % liquidationTaunts.length;
         saveMarketGame();
       }
 
@@ -1249,21 +1617,59 @@
         }
       }
 
+      async function loadOrderBook() {
+        const asset = getMarketAsset();
+        if (!asset || !["spot", "futures"].includes(asset.type)) {
+          currentOrderBook = null;
+          $("depthStatus").textContent = "该演示市场无公开盘口";
+          $("depthBook").innerHTML = "";
+          renderDepthChart();
+          return;
+        }
+        const selected = marketSelectedId, venue = marketVenue;
+        const category = asset.type === "futures" ? "linear" : "spot";
+        const url = venue === "binance"
+          ? `${asset.type === "futures" ? "https://fapi.binance.com/fapi/v1/depth" : "https://api.binance.com/api/v3/depth"}?symbol=${asset.symbol}&limit=20`
+          : `https://api.bybit.com/v5/market/orderbook?category=${category}&symbol=${asset.symbol}&limit=25`;
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) throw new Error(`订单簿请求失败（HTTP ${response.status}）`);
+          const payload = await response.json();
+          if (marketSelectedId !== selected || marketVenue !== venue) return;
+          const result = venue === "binance" ? payload : payload.result;
+          const bids = (venue === "binance" ? result.bids : result?.b || []).map((row) => row.map(Number));
+          const asks = (venue === "binance" ? result.asks : result?.a || []).map((row) => row.map(Number));
+          if (!bids.length || !asks.length || [...bids, ...asks].some((row) => !row.every(Number.isFinite))) {
+            throw new Error("交易所返回的订单簿为空或格式无效");
+          }
+          currentOrderBook = { bids, asks, updatedAt: Date.now() };
+          $("depthStatus").textContent = `公开盘口快照 · ${new Date().toLocaleTimeString()}`;
+          renderDepthChart();
+        } catch (error) {
+          console.warn("无法读取只读公开订单簿。", error);
+          if (marketSelectedId === selected && marketVenue === venue) {
+            $("depthStatus").textContent = "盘口暂不可用 · 稍后重试";
+            currentOrderBook = null;
+            $("depthBook").innerHTML = "";
+            renderDepthChart();
+          }
+        }
+      }
+
       async function loadMarketHistory() {
         const asset = getMarketAsset();
         if (asset.type === "forex") return;
         const interval = marketInterval;
         const venue = marketVenue;
         const selected = marketSelectedId;
-        const intervalMap = { "1m": "1m", "5m": "5m", "15m": "15m" };
+        const setting = intervalSettings[interval] || intervalSettings["1m"];
         const symbol = asset.symbol;
-        const intervalValue = interval === "1m" ? "1" : interval === "5m" ? "5" : "15";
         const category = asset.type === "futures" ? "linear" : "spot";
         const url = venue === "binance"
           ? asset.type === "futures"
-            ? `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
-            : `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
-          : `https://api.bybit.com/v5/market/kline?category=${category}&symbol=${symbol}&interval=${intervalValue}&limit=100`;
+            ? `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${setting.binance}&limit=100`
+            : `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${setting.binance}&limit=100`
+          : `https://api.bybit.com/v5/market/kline?category=${category}&symbol=${symbol}&interval=${setting.bybit}&limit=100`;
         try {
           const response = await fetch(url, { cache: "no-store" });
           if (!response.ok) throw new Error(`历史行情请求失败（HTTP ${response.status}）`);
@@ -1273,11 +1679,12 @@
             ? payload
             : payload.result?.list?.slice().reverse();
           if (!Array.isArray(rows) || !rows.length) throw new Error("交易所没有返回 K 线数据");
-          const candles = rows.map((row) => venue === "binance"
+          let candles = rows.map((row) => venue === "binance"
             ? { time: Number(row[0]), open: Number(row[1]), high: Number(row[2]), low: Number(row[3]), close: Number(row[4]), volume: Number(row[5]), demo: false }
             : { time: Number(row[0]), open: Number(row[1]), high: Number(row[2]), low: Number(row[3]), close: Number(row[4]), volume: Number(row[5]), demo: false }
           ).filter((candle) => Number.isFinite(candle.close) && candle.close > 0);
           if (!candles.length) throw new Error("返回的 K 线数据无效");
+          if (interval === "1y") candles = aggregateYearlyCandles(candles);
           const quote = marketGame.quotes[selected];
           quote.candles = candles;
           quote.previous = candles[candles.length - 2]?.close || candles[candles.length - 1].open;
@@ -1324,8 +1731,10 @@
             1 + randomNormal() * asset.vol * settings.volatility * (asset.type === "forex" ? 0.2 : 0.35) + jump
           ));
           const span = Math.abs(next - previous) + previous * asset.vol * 0.1;
-          const intervalMs = marketInterval === "15m" ? 900000 : marketInterval === "5m" ? 300000 : 60000;
-          const time = Math.floor(Date.now() / intervalMs) * intervalMs;
+          const intervalMs = intervalSettings[marketInterval]?.ms || 60000;
+          const time = marketInterval === "1y"
+            ? Date.UTC(new Date().getUTCFullYear(), 0, 1)
+            : Math.floor(Date.now() / intervalMs) * intervalMs;
           updateMarketCandle({
             time,
             open: quote.candles.at(-1)?.time === time ? quote.candles.at(-1).open : previous,
@@ -1341,11 +1750,18 @@
       function connectMarketFeed() {
         closeMarketSocket();
         clearInterval(marketFallbackTimer);
+        clearInterval(orderBookTimer);
         const asset = getMarketAsset();
         if (!asset) {
           $("marketDataStatus").textContent = "请先选择有挂牌品种的市场";
+          currentOrderBook = null;
+          $("depthStatus").textContent = "暂无可用盘口";
+          $("depthBook").innerHTML = "";
+          renderDepthChart();
           return;
         }
+        loadOrderBook();
+        orderBookTimer = setInterval(loadOrderBook, 5000);
         if (asset.type === "forex" || asset.type === "stocks") {
           $("marketDataStatus").textContent = "离线演示";
           $("marketDataSource").textContent = asset.type === "forex"
@@ -1360,11 +1776,12 @@
           return;
         }
         const interval = marketInterval;
+        const intervalSetting = intervalSettings[interval] || intervalSettings["1m"];
         const symbol = asset.symbol.toLowerCase();
         const url = marketVenue === "binance"
           ? asset.type === "futures"
-            ? `wss://fstream.binance.com/ws/${symbol}@kline_${interval}`
-            : `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`
+            ? `wss://fstream.binance.com/ws/${symbol}@kline_${intervalSetting.binance}`
+            : `wss://stream.binance.com:9443/ws/${symbol}@kline_${intervalSetting.binance}`
           : `wss://stream.bybit.com/v5/public/${asset.type === "futures" ? "linear" : "spot"}`;
         try {
           const socket = new WebSocket(url);
@@ -1375,7 +1792,7 @@
           } else {
             socket.onopen = () => {
               marketSocketAttempt = 0;
-              socket.send(JSON.stringify({ op: "subscribe", args: [`kline.${interval === "1m" ? "1" : interval === "5m" ? "5" : "15"}.${asset.symbol}`] }));
+              socket.send(JSON.stringify({ op: "subscribe", args: [`kline.${intervalSetting.bybit}.${asset.symbol}`] }));
               marketPingTimer = setInterval(() => {
                 if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ op: "ping" }));
               }, 20000);
@@ -1606,6 +2023,30 @@
           saveMarketGame();
         }
         renderAutoClock();
+      }
+
+      function settleFundingPayments() {
+        const now = Date.now();
+        if (now < marketGame.fundingNextAt) return;
+        const periods = Math.floor((now - marketGame.fundingNextAt) / FUNDING_INTERVAL_MS) + 1;
+        marketAssets.filter((asset) => asset.type === "futures").forEach((asset) => {
+          const position = marketGame.leveragedPositions[asset.id];
+          if (!position) return;
+          const rate = Number(marketGame.fundingRates[asset.id] ?? 0.0001);
+          const payment = position.qty * marketGame.quotes[asset.id].price * rate * periods;
+          marketGame.cash -= payment;
+          marketGame.trades.unshift({
+            day: state.day, id: asset.id, name: asset.name, side: "模拟资金费结算",
+            qty: Math.abs(position.qty), price: marketGame.quotes[asset.id].price, amount: payment
+          });
+        });
+        marketGame.trades = marketGame.trades.slice(0, 100);
+        marketGame.fundingNextAt += periods * FUNDING_INTERVAL_MS;
+        marketAssets.filter((asset) => asset.type === "futures").forEach((asset) => {
+          marketGame.fundingRates[asset.id] = Number(clamp(randomNormal() * 0.0001, -0.0003, 0.0003).toFixed(7));
+        });
+        renderMarketTerminal();
+        saveMarketGame();
       }
 
       function startAutomaticDayClock() {
@@ -1858,7 +2299,7 @@
       function advanceDay({ silent = false, render: shouldRender = true } = {}) {
         state.day += 1;
         marketGame.day = state.day;
-        if (marketGame.loanPrincipal > 0) marketGame.loanInterest += marketGame.loanPrincipal * 0.0003;
+        if (marketGame.loanPrincipal > 0) marketGame.loanInterest += marketGame.loanPrincipal * LOAN_APR / 365;
         const nextDate = new Date(state.date + "T12:00:00");
         nextDate.setDate(nextDate.getDate() + 1);
         state.date = nextDate.toISOString().slice(0, 10);
@@ -1904,6 +2345,9 @@
         if (!window.confirm("确定要重开吗？本机保存的模拟资金、交易记录和 AI 对战进度都会被清除。")) return;
         state = newGame();
         Object.assign(marketGame, newMarketGame());
+        marketGame.marketInterval = marketInterval;
+        marketGame.overlayIndicator = $("overlaySelect").value;
+        marketGame.subIndicator = $("indicatorSelect").value;
         selectedId = assets[0].id;
         $("orderStock").value = selectedId;
         $("stockSelect").value = selectedId;
@@ -1970,15 +2414,30 @@
         saveMarketGame();
         showToast(`已切换至${currentDifficulty().label}模式。`);
       });
-      $("nextTaunt").addEventListener("click", cycleLiquidationTaunt);
       $("dismissLiquidation").addEventListener("click", () => { $("liquidationModal").hidden = true; });
       $("liquidationModal").addEventListener("click", (event) => {
         if (event.target === $("liquidationModal")) $("liquidationModal").hidden = true;
       });
       $("intervalSelect").addEventListener("change", (event) => {
         marketInterval = event.target.value;
+        marketGame.marketInterval = marketInterval;
+        saveMarketGame();
         connectMarketFeed();
       });
+      $("overlaySelect").value = marketGame.overlayIndicator;
+      $("overlaySelect").addEventListener("change", (event) => {
+        marketGame.overlayIndicator = event.target.value;
+        renderCandleChart();
+        saveMarketGame();
+      });
+      $("indicatorSelect").value = marketGame.subIndicator;
+      $("indicatorSelect").addEventListener("change", (event) => {
+        marketGame.subIndicator = event.target.value;
+        renderCandleChart();
+        saveMarketGame();
+      });
+      $("candleChart").addEventListener("pointermove", showCandleTooltip);
+      $("candleChart").addEventListener("pointerleave", () => { $("chartTooltip").hidden = true; });
       $("marketQty").addEventListener("input", renderMarketTerminal);
       $("leverageSelect").addEventListener("change", renderMarketTerminal);
       $("marketBuy").addEventListener("click", () => tradeMarketSpot("买入"));
@@ -2000,6 +2459,7 @@
       window.addEventListener("resize", () => {
         renderQuote();
         renderCandleChart();
+        renderDepthChart();
       });
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         window.addEventListener("load", () => {
@@ -2015,6 +2475,8 @@
       render();
       renderMarketTerminal();
       startAutomaticDayClock();
+      settleFundingPayments();
+      fundingTimer = setInterval(settleFundingPayments, 30000);
       loadExchangeCatalog(marketVenue);
       loadForexReference();
       connectMarketFeed();
