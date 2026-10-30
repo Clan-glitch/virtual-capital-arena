@@ -172,6 +172,15 @@
     .market-order { display: grid; gap: 11px; padding: 14px; border: 1px solid #202b3e; border-radius: 13px; background: #0d1421; }
     .order-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
     .order-actions .button { min-height: 38px; padding: 0 8px; font-size: 11px; }
+    .position-card { display: grid; gap: 9px; padding: 10px 0; border-top: 1px solid #202b3e; }
+    .position-main { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 10px; }
+    .position-detail { min-width: 0; color: #bdc7d8; line-height: 1.6; }
+    .position-management { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .position-management .field { width: auto; min-width: 90px; min-height: 34px; padding: 0 8px; font-size: 11px; }
+    .position-management input.field { flex: 1 1 96px; }
+    .position-management .button { min-height: 34px; padding: 0 9px; font-size: 10px; }
+    .transfer-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .transfer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .risk-note { color: var(--muted); font-size: 10px; line-height: 1.55; }
     .loan-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .loan-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -388,6 +397,13 @@
                 <label for="leverageSelect">杠杆（1–1000×；倍数越高越易爆仓）</label>
                 <input id="leverageSelect" class="field" type="number" min="1" max="1000" step="1" value="5" inputmode="numeric">
               </div>
+              <div class="form-row" id="marginModeRow">
+                <label for="marginModeSelect">保证金模式（全仓共用合约净值；逐仓仅使用该仓保证金）</label>
+                <select id="marginModeSelect" class="field" aria-label="新开仓保证金模式">
+                  <option value="isolated">逐仓</option>
+                  <option value="cross">全仓</option>
+                </select>
+              </div>
               <div class="order-summary"><span>模拟名义金额</span><strong id="marketNotional">$—</strong></div>
               <div class="order-summary"><span>预估占用保证金</span><strong id="marketMargin">$—</strong></div>
               <div class="order-summary"><span>多市场模拟净值（扣除欠款）</span><strong id="marketEquity">$100,000.00</strong></div>
@@ -402,7 +418,7 @@
                 <button id="marketCloseFuture" class="button" disabled>平仓</button>
               </div>
               <div id="marketOrderHint" class="hint" role="status">请选择市场。真实下单已禁用。</div>
-              <div class="risk-note">高难模式加入远高于市场的手续费、滑点和模拟跳价。1–1000×只代表游戏选项，不代表交易平台规则或可用杠杆。</div>
+              <div class="risk-note">全仓按合约可用余额及所有全仓仓位的盈亏共担风险；逐仓风险以该仓保证金单独计算。追加全仓保证金会将可用余额标记至该仓，仍纳入全仓净值。高难模式加入远高于市场的手续费、滑点和模拟跳价。1–1000×仅为游戏选项。</div>
             </div>
             <div>
               <h2>模拟持仓</h2>
@@ -448,6 +464,26 @@
             <button id="sellBtn" class="button sell">卖出</button>
           </div>
           <div id="orderHint" class="hint" role="status">成交后可在“我的持仓”查看。</div>
+        </section>
+
+        <section class="card order-card">
+          <div class="card-heading">
+            <div><h2>模拟资金划转</h2><div class="section-note">股票现金与合约可用余额互转，不触碰持仓</div></div>
+            <span class="market-tag">本地记账</span>
+          </div>
+          <div class="transfer-stats">
+            <div class="loan-metric"><span class="stat-label">股票可用现金</span><strong id="transferStockBalance">$100,000.00</strong></div>
+            <div class="loan-metric"><span class="stat-label">合约可用余额</span><strong id="transferContractBalance">$100,000.00</strong></div>
+          </div>
+          <div class="form-row">
+            <label for="transferAmount">划转金额（模拟美元）</label>
+            <input id="transferAmount" class="field" type="number" min="0.01" step="100" value="1000" inputmode="decimal">
+          </div>
+          <div class="transfer-actions">
+            <button id="transferToContract" class="button">股票 → 合约</button>
+            <button id="transferToStocks" class="button">合约 → 股票</button>
+          </div>
+          <div id="transferHint" class="risk-note" role="status">划转即时生效并保存在本机；被持仓占用的保证金不能划出，合约余额只显示未被仓位占用的可用资金。</div>
         </section>
 
         <section class="card">
@@ -601,7 +637,7 @@
         initial: 1, vol: 0.001, digits: base.includes("JPY") || quote.includes("JPY") ? 3 : 5,
         base, quote, venue: "ecb", hot: ["EURUSD","USDJPY","GBPUSD","USDCHF","USDCAD","AUDUSD","NZDUSD","EURGBP","EURJPY","GBPJPY","EURCHF","AUDJPY"].includes(symbol)
       }));
-      marketAssets = marketAssets.concat(stockAssets, fxAssets);
+      marketAssets = marketAssets.filter((asset) => asset.type !== "forex").concat(stockAssets, fxAssets);
       const MARKET_DAY_MS = 24 * 60 * 60 * 1000;
       const LOAN_APR = 0.5;
       const FUNDING_INTERVAL_MS = 8 * 60 * 60 * 1000;
@@ -737,6 +773,14 @@
             fundingRates: saved.fundingRates && typeof saved.fundingRates === "object" ? saved.fundingRates : {},
             fundingNextAt: Number.isFinite(saved.fundingNextAt) ? saved.fundingNextAt : fresh.fundingNextAt
           };
+          Object.values(loaded.leveragedPositions).forEach((position) => {
+            if (position && typeof position === "object") {
+              position.marginMode = position.marginMode === "cross" ? "cross" : "isolated";
+              position.maintenanceMargin = Number.isFinite(position.maintenanceMargin)
+                ? Math.max(0, position.maintenanceMargin)
+                : Math.max(0, Number(position.margin) || 0) * 0.2;
+            }
+          });
           marketAssets.forEach((asset) => { loaded.quotes[asset.id].live = false; });
           return loaded;
         } catch (error) {
@@ -859,6 +903,19 @@
       }
       function marketUnrealized(position, price) {
         return position ? (price - position.avg) * position.qty : 0;
+      }
+      function positionMaintenanceMargin(position) {
+        return Number.isFinite(position.maintenanceMargin)
+          ? Math.max(0, position.maintenanceMargin)
+          : Math.max(0, Number(position.margin) || 0) * 0.2;
+      }
+      function crossAccountEquity() {
+        return marketGame.cash + marketAssets.filter(isLeveragedMarket).reduce((sum, asset) => {
+          const position = marketGame.leveragedPositions[asset.id];
+          return sum + (position?.marginMode === "cross"
+            ? position.margin + marketUnrealized(position, marketGame.quotes[asset.id].price)
+            : 0);
+        }, 0) - marketGame.loanPrincipal - marketGame.loanInterest;
       }
       function marketEquity() {
         const spotValue = marketAssets.filter((asset) => asset.type === "spot")
@@ -1343,6 +1400,9 @@
       }
 
       function renderMarketPositions() {
+        const marginAmounts = new Map(Array.from($("marketPositions").querySelectorAll("[data-margin-amount]"))
+          .map((input) => [input.dataset.marginAmount, input.value]));
+        const focusedMarginInput = document.activeElement?.dataset?.marginAmount || "";
         const rows = marketAssets.filter((asset) => marketPosition(asset));
         if (!rows.length) {
           $("marketPositions").innerHTML = '<div class="empty">当前没有多市场模拟持仓。</div>';
@@ -1355,12 +1415,102 @@
             : (getMarketPrice(asset.id) - position.avg) * position.qty;
           const amount = Math.abs(position.qty);
           const label = isLeveragedMarket(asset) ? (position.qty > 0 ? "多" : "空") : "现货";
+          if (isLeveragedMarket(asset)) {
+            const mode = position.marginMode === "cross" ? "cross" : "isolated";
+            return `<div class="position-card">
+              <div class="position-main">
+                <div class="log-side ${tone(pnl)}">${label}</div>
+                <div class="position-detail">${asset.name} · ${amount.toFixed(amount < 1 ? 4 : 2)} · 均价 ${fmtPrice(position.avg)} · ${mode === "cross" ? "全仓" : "逐仓"}保证金 ${fmtMoney(position.margin)}</div>
+                <div class="log-total ${tone(pnl)}">${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}</div>
+              </div>
+              <div class="position-management">
+                <select class="field" data-margin-mode="${asset.id}" aria-label="${asset.name}保证金模式">
+                  <option value="isolated"${mode === "isolated" ? " selected" : ""}>逐仓</option>
+                  <option value="cross"${mode === "cross" ? " selected" : ""}>全仓</option>
+                </select>
+                <input class="field" type="number" min="0.01" step="100" placeholder="增加保证金" data-margin-amount="${asset.id}" aria-label="${asset.name}增加保证金金额">
+                <button class="button" type="button" data-add-margin="${asset.id}">增加保证金</button>
+              </div>
+            </div>`;
+          }
           return `<div class="log-row">
             <div class="log-side ${tone(pnl)}">${label}</div>
             <div class="log-detail">${asset.name} · ${amount.toFixed(amount < 1 ? 4 : 2)} · 均价 ${fmtPrice(position.avg)}${asset.type === "futures" ? ` · 资金费 ${Number(marketGame.fundingRates[asset.id] ?? 0.0001) >= 0 ? "多方支付" : "空方支付"}` : ""}</div>
             <div class="log-total ${tone(pnl)}">${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}</div>
           </div>`;
         }).join("");
+        marginAmounts.forEach((value, assetId) => {
+          const input = $("marketPositions").querySelector(`[data-margin-amount="${assetId}"]`);
+          if (input) input.value = value;
+        });
+        if (focusedMarginInput) {
+          $("marketPositions").querySelector(`[data-margin-amount="${focusedMarginInput}"]`)?.focus();
+        }
+      }
+
+      function renderAccountTransfer() {
+        $("transferStockBalance").textContent = fmtMoney(state.cash);
+        $("transferContractBalance").textContent = fmtMoney(marketGame.cash);
+        $("transferToContract").disabled = state.cash <= 0;
+        $("transferToStocks").disabled = marketGame.cash <= 0;
+      }
+
+      function transferAccountFunds(toContract) {
+        const amount = Number($("transferAmount").value);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          $("transferHint").textContent = "请输入大于 0 的有效划转金额。";
+          return;
+        }
+        const sourceBalance = toContract ? state.cash : marketGame.cash;
+        if (amount > sourceBalance) {
+          $("transferHint").textContent = `可用余额不足；当前最多可划转 ${fmtMoney(Math.max(0, sourceBalance))}。`;
+          return;
+        }
+        if (toContract) {
+          state.cash -= amount;
+          marketGame.cash += amount;
+        } else {
+          marketGame.cash -= amount;
+          state.cash += amount;
+        }
+        $("transferHint").textContent = `已将 ${fmtMoney(amount)} 从${toContract ? "股票账户划入合约账户" : "合约账户划回股票账户"}。`;
+        saveGame();
+        render();
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function addPositionMargin(assetId) {
+        const asset = getMarketAsset(assetId);
+        const position = asset && marketGame.leveragedPositions[assetId];
+        const input = $("marketPositions").querySelector(`[data-margin-amount="${assetId}"]`);
+        const amount = Number(input?.value);
+        if (!position || !isLeveragedMarket(asset)) {
+          $("marketOrderHint").textContent = "找不到对应的模拟杠杆持仓。";
+          return;
+        }
+        if (!Number.isFinite(amount) || amount <= 0) {
+          $("marketOrderHint").textContent = "请输入大于 0 的有效保证金金额。";
+          return;
+        }
+        if (amount > marketGame.cash) {
+          $("marketOrderHint").textContent = `合约可用余额不足；当前可用 ${fmtMoney(Math.max(0, marketGame.cash))}。`;
+          return;
+        }
+        marketGame.cash -= amount;
+        position.margin += amount;
+        $("marketOrderHint").textContent = `已为${asset.name}增加 ${fmtMoney(amount)} ${position.marginMode === "cross" ? "全仓" : "逐仓"}保证金。`;
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function updatePositionMarginMode(assetId, mode) {
+        const position = marketGame.leveragedPositions[assetId];
+        if (!position || !["cross", "isolated"].includes(mode)) return;
+        position.marginMode = mode;
+        $("marketOrderHint").textContent = `${getMarketAsset(assetId)?.name || assetId} 已切换为${mode === "cross" ? "全仓（合约余额共担风险）" : "逐仓（此仓保证金独立承担风险）"}。`;
+        renderMarketTerminal();
+        saveMarketGame();
       }
 
       function renderMarketTerminal() {
@@ -1374,10 +1524,11 @@
         $("marketChange").textContent = `${fmtSigned(change)} ${quote.live ? "实时" : "模拟"}`;
         $("marketChange").className = "quote-meta " + tone(change);
         $("marketKind").textContent = asset.type === "spot" ? "模拟现货" : asset.type === "futures" ? "模拟永续合约" : asset.type === "stocks" ? "虚拟股票" : "外汇参考模拟";
-        $("marketOrderType").textContent = asset.type === "spot" ? "模拟现货 · 现金全额结算" : asset.type === "futures" ? "模拟永续 · 独立保证金" : asset.type === "forex" ? "模拟外汇 · 虚拟保证金" : "虚拟股票 · 非实时模拟价格";
+        $("marketOrderType").textContent = asset.type === "spot" ? "模拟现货 · 现金全额结算" : asset.type === "futures" ? "模拟永续 · 可选全仓/逐仓" : asset.type === "forex" ? "模拟外汇 · 可选全仓/逐仓" : "虚拟股票 · 非实时模拟价格";
         $("marketCash").textContent = fmtMoney(marketGame.cash);
         $("marketEquity").textContent = fmtMoney(marketEquity());
         $("leverageRow").hidden = !isLeveragedMarket(asset);
+        $("marginModeRow").hidden = !isLeveragedMarket(asset);
         $("spotActions").hidden = isLeveragedMarket(asset);
         $("futuresActions").hidden = !isLeveragedMarket(asset);
         $("marketDataSource").textContent = asset.type === "forex"
@@ -1420,6 +1571,7 @@
         $("loanInterest").textContent = fmtMoney(marketGame.loanInterest);
         $("loanHint").textContent = `模拟年化利率 ${(LOAN_APR * 100).toFixed(0)}%，按推进的游戏日计息；借款不计入净资产。模拟可借上限 ${fmtMoney(MARKET_INITIAL_CASH * 0.5)}。`;
         renderMarketMetrics(asset, quote, position);
+        renderAccountTransfer();
         renderCandleChart();
         renderDepthChart();
         renderMarketPositions();
@@ -1445,13 +1597,24 @@
           const minutes = Math.floor((remaining % 3600000) / 60000);
           $("fundingLabel").textContent = "模拟资金费率 / 下次结算";
           $("fundingRate").textContent = `${(rate * 100).toFixed(4)}% · ${hours}时${minutes}分`;
-          const pnl = position ? marketUnrealized(position, quote.price) : 0;
-          const marginRatio = position?.margin ? `${(Math.max(0, -pnl) / position.margin * 100).toFixed(1)}%` : "无持仓";
-          $("riskMetricLabel").textContent = position ? "保证金亏损占比" : "杠杆/价差参考";
-          $("riskMetricValue").textContent = position ? marginRatio : `${$("leverageSelect").value || 1}× · 仅模拟`;
         } else {
           $("fundingLabel").textContent = "模拟借贷年化率";
           $("fundingRate").textContent = `${(LOAN_APR * 100).toFixed(0)}%`;
+        }
+        if (position?.marginMode === "cross") {
+          const maintenance = marketAssets.filter(isLeveragedMarket).reduce((sum, item) => {
+            const crossPosition = marketGame.leveragedPositions[item.id];
+            return sum + (crossPosition?.marginMode === "cross"
+              ? positionMaintenanceMargin(crossPosition)
+              : 0);
+          }, 0);
+          $("riskMetricLabel").textContent = "全仓净值 / 维持保证金";
+          $("riskMetricValue").textContent = `${fmtMoney(crossAccountEquity())} / ${fmtMoney(maintenance)}`;
+        } else if (position) {
+          const pnl = marketUnrealized(position, quote.price);
+          $("riskMetricLabel").textContent = "逐仓亏损 / 保证金";
+          $("riskMetricValue").textContent = `${(Math.max(0, -pnl) / position.margin * 100).toFixed(1)}%`;
+        } else {
           $("riskMetricLabel").textContent = "当前周期 / 涨跌";
           $("riskMetricValue").textContent = `${marketInterval} · ${fmtSigned(quote.previous ? (quote.price / quote.previous - 1) * 100 : 0)}`;
         }
@@ -1555,17 +1718,39 @@
         }
         quote.price = nextCandle.close;
         quote.volume = nextCandle.volume || quote.volume;
-        const marginPosition = marketGame.leveragedPositions[marketSelectedId];
-        if (marginPosition && marginPosition.margin > 0 &&
-            marketUnrealized(marginPosition, quote.price) <= -marginPosition.margin * 0.8) {
-          const loss = marketUnrealized(marginPosition, quote.price);
-          const liquidationFee = Math.abs(marginPosition.qty * quote.price) * currentDifficulty().fee;
-          marketGame.cash = Math.max(0, marketGame.cash + marginPosition.margin + Math.max(loss, -marginPosition.margin) - liquidationFee);
-          showLiquidation();
-          delete marketGame.leveragedPositions[marketSelectedId];
-          saveMarketGame();
-        }
+        processLeveragedLiquidations();
         renderMarketTerminal();
+      }
+
+      function processLeveragedLiquidations() {
+        const positions = marketAssets.filter(isLeveragedMarket)
+          .map((asset) => ({ asset, position: marketGame.leveragedPositions[asset.id] }))
+          .filter(({ position }) => position);
+        const isolated = positions.filter(({ position }) => position.marginMode !== "cross");
+        const cross = positions.filter(({ position }) => position.marginMode === "cross");
+        const toLiquidate = isolated.filter(({ asset, position }) =>
+          position.margin > 0 &&
+          marketUnrealized(position, marketGame.quotes[asset.id].price) <= -position.margin * 0.8
+        );
+        if (cross.length) {
+          const maintenance = cross.reduce((sum, { asset, position }) =>
+            sum + positionMaintenanceMargin(position), 0);
+          if (crossAccountEquity() <= maintenance) toLiquidate.push(...cross);
+        }
+        if (!toLiquidate.length) return false;
+        const uniquePositions = [...new Map(toLiquidate.map(({ asset, position }) => [asset.id, { asset, position }])).values()];
+        const settlement = uniquePositions.reduce((sum, { asset, position }) => {
+          const price = marketGame.quotes[asset.id].price;
+          const pnl = marketUnrealized(position, price);
+          const fee = Math.abs(position.qty * price) * currentDifficulty().fee;
+          const realizedLoss = position.marginMode === "cross" ? pnl : Math.max(pnl, -position.margin);
+          delete marketGame.leveragedPositions[asset.id];
+          return sum + position.margin + realizedLoss - fee;
+        }, 0);
+        marketGame.cash = Math.max(0, marketGame.cash + settlement);
+        showLiquidation();
+        saveMarketGame();
+        return true;
       }
 
       function showLiquidation() {
@@ -1838,6 +2023,11 @@
           $("marketOrderHint").textContent = "当前持有反向仓位，请先平仓，再建立新方向仓位。";
           return;
         }
+        const marginMode = $("marginModeSelect").value === "cross" ? "cross" : "isolated";
+        if (existing && (existing.marginMode === "cross" ? "cross" : "isolated") !== marginMode) {
+          $("marketOrderHint").textContent = "现有持仓保证金模式与当前选择不同；请先在持仓卡片切换模式。";
+          return;
+        }
         const signedQty = qty * direction;
         const margin = Math.abs(qty * price) / leverage;
         const fee = Math.abs(qty * price) * currentDifficulty().fee;
@@ -1850,8 +2040,11 @@
           existing.avg = (oldQty * existing.avg + Math.abs(qty) * price) / (oldQty + Math.abs(qty));
           existing.qty += signedQty;
           existing.margin += margin;
+          existing.maintenanceMargin = (existing.maintenanceMargin ?? existing.margin - margin) + margin * 0.2;
         } else {
-          marketGame.leveragedPositions[asset.id] = { qty: signedQty, avg: price, margin, leverage };
+          marketGame.leveragedPositions[asset.id] = {
+          qty: signedQty, avg: price, margin, leverage, marginMode, maintenanceMargin: margin * 0.2
+          };
         }
         marketGame.cash -= margin + fee;
         marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: direction > 0 ? "模拟开多" : "模拟开空", qty, price });
@@ -1870,10 +2063,11 @@
         const executionPrice = markPrice * (1 - Math.sign(position.qty) * currentDifficulty().slip);
         const pnl = (executionPrice - position.avg) * position.qty;
         const fee = Math.abs(position.qty * executionPrice) * currentDifficulty().fee;
-        marketGame.cash += position.margin + Math.max(pnl, -position.margin) - fee;
+        marketGame.cash += position.margin + (position.marginMode === "cross" ? pnl : Math.max(pnl, -position.margin)) - fee;
         marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟平仓", qty: Math.abs(position.qty), price: executionPrice });
         marketGame.trades = marketGame.trades.slice(0, 100);
         delete marketGame.leveragedPositions[asset.id];
+        marketGame.cash = Math.max(0, marketGame.cash);
         $("marketOrderHint").textContent = `模拟平仓完成，已实现盈亏 ${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}，费用 ${fmtMoney(fee)}。`;
         renderMarketTerminal();
         saveMarketGame();
@@ -2205,6 +2399,7 @@
         renderFeed();
         renderTrades();
         syncOrder();
+        renderAccountTransfer();
         saveGame();
       }
 
@@ -2446,8 +2641,18 @@
       $("marketLong").addEventListener("click", () => openLeveragedPosition(1));
       $("marketShort").addEventListener("click", () => openLeveragedPosition(-1));
       $("marketCloseFuture").addEventListener("click", closeLeveragedPosition);
+      $("marketPositions").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-add-margin]");
+        if (button) addPositionMargin(button.dataset.addMargin);
+      });
+      $("marketPositions").addEventListener("change", (event) => {
+        const select = event.target.closest("[data-margin-mode]");
+        if (select) updatePositionMarginMode(select.dataset.marginMode, select.value);
+      });
       $("borrowBtn").addEventListener("click", () => borrowMarketFunds(false));
       $("repayBtn").addEventListener("click", () => borrowMarketFunds(true));
+      $("transferToContract").addEventListener("click", () => transferAccountFunds(true));
+      $("transferToStocks").addEventListener("click", () => transferAccountFunds(false));
       $("rankPrev").addEventListener("click", () => {
         tournamentPage = Math.max(1, tournamentPage - 1);
         renderTournament();
