@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "虚拟资本论 · AI 股东交易场",
+  "short_name": "虚拟交易场",
+  "description": "可安装到手机主屏幕的多市场模拟交易游戏。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d18",
+  "theme_color": "#090d18",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

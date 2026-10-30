@@ -1,0 +1,1611 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d18">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>虚拟资本论 · AI 股东交易场</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090d18;
+      --panel: #111827;
+      --panel-2: #151f31;
+      --line: #253149;
+      --muted: #8290a9;
+      --text: #edf2ff;
+      --green: #41d6a3;
+      --red: #ff7185;
+      --blue: #70a7ff;
+      --gold: #f6c76b;
+      --radius: 16px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 75% -20%, #1a2e4a 0, transparent 42%),
+        var(--bg);
+    }
+    button, select, input { font: inherit; }
+    button { color: inherit; }
+    .app { max-width: 1440px; margin: auto; padding: 22px 26px 36px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      display: grid; width: 42px; height: 42px; place-items: center;
+      border: 1px solid #335277; border-radius: 13px;
+      color: #9dc8ff; background: linear-gradient(145deg, #193857, #15233a);
+      font-size: 21px; font-weight: 900;
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: .02em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .day-chip, .live-chip { padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: #101827; font-size: 12px; }
+    .live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px #41d6a366; }
+    .button {
+      min-height: 44px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px;
+      background: #172237; cursor: pointer; touch-action: manipulation; transition: .16s ease;
+    }
+    .button:hover { border-color: #49658d; transform: translateY(-1px); }
+    .button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .button.primary { border-color: #426db0; background: linear-gradient(135deg, #397bd0, #315db5); font-weight: 700; }
+    .button.primary:hover { background: linear-gradient(135deg, #4b8ce0, #3e6dcc); }
+    .button.buy { border-color: #24785f; background: #12392f; color: #75e6bd; }
+    .button.sell { border-color: #8a4352; background: #3a202a; color: #ff9aab; }
+    .button.subtle { background: transparent; color: var(--muted); }
+    .button:disabled { opacity: .42; cursor: not-allowed; transform: none; }
+    .dashboard { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+    .main-column, .side-column { display: grid; gap: 16px; min-width: 0; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .card, .stat {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: linear-gradient(155deg, #121b2a, #101725 75%);
+      box-shadow: 0 12px 30px #03071122;
+    }
+    .stat { min-height: 94px; padding: 15px 16px; }
+    .stat-label { color: var(--muted); font-size: 11px; }
+    .stat-value { margin-top: 9px; font-size: clamp(17px, 2vw, 23px); font-weight: 750; letter-spacing: -.03em; }
+    .stat-hint { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .positive { color: var(--green) !important; }
+    .negative { color: var(--red) !important; }
+    .neutral { color: var(--muted) !important; }
+    .card { padding: 17px; }
+    .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    h2 { margin: 0; font-size: 14px; }
+    .section-note { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .stock-selector { max-width: 185px; min-height: 35px; padding: 0 10px; color: var(--text); border: 1px solid var(--line); border-radius: 9px; background: #0e1624; }
+    .chart-legend { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 11px; }
+    .legend-mark { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: var(--blue); }
+    .chart-wrap { height: 245px; margin: 8px -4px 0; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .quote-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 18px; padding-top: 12px; border-top: 1px solid #202b3e; font-size: 12px; }
+    .quote-name { font-size: 14px; font-weight: 700; }
+    .quote-price { font-size: 20px; font-weight: 750; }
+    .quote-meta { color: var(--muted); }
+    .asset-list { display: grid; gap: 0; margin-top: 12px; }
+    .asset-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center; gap: 12px; padding: 12px 1px; border-top: 1px solid #202b3e;
+      cursor: pointer;
+    }
+    .asset-row:hover .asset-name { color: #a9ccff; }
+    .asset-name { font-size: 12px; font-weight: 700; }
+    .asset-code { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .asset-price { font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; }
+    .asset-change { min-width: 66px; text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .order-card { display: grid; gap: 14px; }
+    .order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .market-tag { padding: 5px 8px; color: #a9c5eb; border: 1px solid #30415b; border-radius: 8px; background: #152238; font-size: 10px; }
+    .form-row { display: grid; gap: 7px; }
+    label { color: var(--muted); font-size: 11px; }
+    .field { width: 100%; min-height: 39px; padding: 0 11px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: #0b1220; }
+    .order-summary { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+    .order-summary strong { color: var(--text); font-weight: 650; }
+    .trade-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .trade-buttons .button { min-height: 42px; }
+    .hint { min-height: 16px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .holdings-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
+    .holdings-table th { padding: 9px 4px; color: var(--muted); font-weight: 500; text-align: right; }
+    .holdings-table th:first-child, .holdings-table td:first-child { text-align: left; }
+    .holdings-table td { padding: 10px 4px; border-top: 1px solid #202b3e; text-align: right; font-variant-numeric: tabular-nums; }
+    .empty { padding: 19px 6px; color: var(--muted); text-align: center; font-size: 11px; }
+    .rank-list { display: grid; gap: 7px; margin-top: 13px; }
+    .rank-item { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 1px solid #202b3e; border-radius: 11px; background: #0d1421; }
+    .rank-num { color: #65728a; font-size: 11px; text-align: center; }
+    .rank-num.top { color: var(--gold); font-weight: 800; }
+    .rank-name { font-size: 11px; font-weight: 700; }
+    .rank-style { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .rank-pnl { font-size: 11px; font-weight: 700; text-align: right; }
+    .rank-equity { margin-top: 4px; color: var(--muted); font-size: 10px; text-align: right; }
+    .feed { display: grid; gap: 10px; max-height: 260px; overflow: auto; margin: 12px -4px 0 0; padding-right: 4px; }
+    .feed-item { padding-left: 11px; border-left: 2px solid #344562; }
+    .feed-item.event { border-color: var(--gold); }
+    .feed-item.trade { border-color: var(--blue); }
+    .feed-time { color: #66748c; font-size: 10px; }
+    .feed-text { margin-top: 3px; color: #c5cede; font-size: 11px; line-height: 1.55; }
+    .log-list { display: grid; gap: 0; max-height: 190px; overflow: auto; margin-top: 10px; }
+    .log-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 8px; padding: 9px 0; border-top: 1px solid #202b3e; font-size: 10px; }
+    .log-side { font-weight: 700; }
+    .log-detail { color: #bdc7d8; }
+    .log-total { color: var(--muted); text-align: right; }
+    .terminal-card { display: grid; gap: 14px; }
+    .terminal-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .terminal-toolbar .field { width: auto; min-width: 114px; min-height: 34px; padding: 0 9px; font-size: 11px; }
+    .terminal-toolbar select:last-child { min-width: 85px; }
+    .terminal-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
+    .status-pill { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; background: #0c1421; }
+    .terminal-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px 14px; }
+    .terminal-last { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .candle-wrap { height: 300px; margin: -2px -4px 0; }
+    .terminal-trade-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, .9fr); gap: 14px; }
+    .market-order { display: grid; gap: 11px; padding: 14px; border: 1px solid #202b3e; border-radius: 13px; background: #0d1421; }
+    .order-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .order-actions .button { min-height: 38px; padding: 0 8px; font-size: 11px; }
+    .risk-note { color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .loan-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .loan-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .loan-metric { padding: 10px; border: 1px solid #202b3e; border-radius: 10px; background: #0d1421; }
+    .loan-metric strong { display: block; margin-top: 5px; font-size: 12px; }
+    .leaderboard-disclaimer { margin-top: 12px; padding: 9px; border: 1px solid #594d30; border-radius: 10px; color: #d7bd85; background: #211d15; font-size: 10px; line-height: 1.55; }
+    .tournament-list { display: grid; gap: 6px; margin-top: 12px; }
+    .tournament-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid #202b3e; border-radius: 10px; background: #0d1421; font-size: 10px; }
+    .tournament-row.self { border-color: #426db0; background: #14243a; }
+    .tournament-rank { color: var(--gold); text-align: center; font-weight: 750; }
+    .tournament-name { overflow: hidden; color: #c9d4e5; text-overflow: ellipsis; white-space: nowrap; }
+    .tournament-return { text-align: right; font-variant-numeric: tabular-nums; }
+    .page-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+    .page-controls .button { min-height: 31px; padding: 0 9px; font-size: 10px; }
+    .page-label { color: var(--muted); font-size: 10px; text-align: center; }
+    .footer { margin-top: 18px; color: #69758b; font-size: 10px; line-height: 1.6; text-align: center; }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 3; max-width: min(390px, calc(100vw - 40px)); padding: 12px 15px; border: 1px solid #3c5375; border-radius: 12px; background: #17253a; box-shadow: 0 12px 35px #0008; font-size: 12px; animation: appear .18s ease-out; }
+    @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 980px) {
+      .app { padding: 17px; }
+      .dashboard { grid-template-columns: minmax(0, 1fr) 290px; gap: 12px; }
+      .main-column, .side-column { gap: 12px; }
+      .stats { gap: 8px; }
+      .stat { padding: 13px; }
+    }
+    @media (max-width: 720px) {
+      .app { padding: 14px 12px 25px; }
+      .topbar { align-items: flex-start; }
+      .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .dashboard { grid-template-columns: 1fr; }
+      .side-column { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat { min-height: 83px; }
+      .chart-wrap { height: 215px; }
+      .candle-wrap { height: 240px; }
+      .terminal-trade-grid { grid-template-columns: 1fr; }
+      .terminal-toolbar .field { flex: 1 1 calc(50% - 8px); min-width: 0; min-height: 44px; }
+      .field { min-height: 46px; font-size: 16px; }
+      .order-actions .button, .loan-row .button { min-height: 46px; }
+      .page-controls .button { min-height: 40px; }
+      .asset-row { min-height: 58px; }
+      .desktop-break { display: none; }
+    }
+    @media (max-width: 400px) {
+      .app { padding: 12px 9px 22px; }
+      .topbar { gap: 8px; }
+      h1 { font-size: 15px; }
+      .subtitle { font-size: 10px; }
+      .logo { width: 36px; height: 36px; }
+      .top-actions { gap: 5px; }
+      .day-chip, .live-chip { padding: 7px 8px; font-size: 10px; }
+      .top-actions .button { min-height: 40px; padding: 0 9px; font-size: 11px; }
+      .card { padding: 14px; }
+      .asset-row { gap: 7px; }
+      .asset-change { min-width: 57px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">股</div>
+        <div>
+          <h1>虚拟资本论 <span style="color:#8494ad;font-weight:500">/ AI 股东交易场</span></h1>
+          <div class="subtitle">和 AI 投资人同场竞技 · 只用虚拟资金</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span class="live-chip"><i class="live-dot"></i>模拟市场</span>
+        <span id="dayBadge" class="day-chip">第 1 天</span>
+        <button id="nextDay" class="button primary">推进一天 →</button>
+        <button id="resetGame" class="button subtle" title="清除本机进度并重新开始">重开</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="账户概览">
+      <article class="stat"><div class="stat-label">股票模拟账户资产</div><div id="equity" class="stat-value">$100,000</div><div id="equityHint" class="stat-hint">含虚拟股票现金与持仓</div></article>
+      <article class="stat"><div class="stat-label">股票模拟账户盈亏</div><div id="totalPnl" class="stat-value">$0</div><div id="totalPnlHint" class="stat-hint">相对初始资金</div></article>
+      <article class="stat"><div class="stat-label">股票模拟账户现金</div><div id="cash" class="stat-value">$100,000</div><div class="stat-hint">买入后即时扣减</div></article>
+      <article class="stat"><div class="stat-label">AI 对战排名</div><div id="rank" class="stat-value">—</div><div id="rankHint" class="stat-hint">与 3 位 AI 股东同场</div></article>
+    </section>
+
+    <main class="dashboard" style="margin-top:16px">
+      <div class="main-column">
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>市场行情</h2><div class="section-note">虚构标的 · 随时间推进生成模拟价格</div></div>
+            <select id="stockSelect" class="stock-selector" aria-label="选择查看的虚拟股票"></select>
+          </div>
+          <div class="chart-wrap"><canvas id="priceChart" aria-label="虚拟股票历史价格图表"></canvas></div>
+          <div class="quote-strip">
+            <span id="quoteName" class="quote-name">—</span>
+            <span id="quotePrice" class="quote-price">$—</span>
+            <span id="quoteChange" class="quote-meta">—</span>
+            <span id="quoteVolume" class="quote-meta">—</span>
+          </div>
+          <div id="assetList" class="asset-list"></div>
+        </section>
+
+        <section class="card terminal-card">
+          <div class="card-heading">
+            <div><h2>多市场模拟交易终端</h2><div class="section-note">高流动性加密资产公开行情 · 外汇使用演示报价</div></div>
+            <span class="market-tag">虚拟账户</span>
+          </div>
+          <div class="terminal-toolbar">
+            <select id="venueSelect" class="field" aria-label="公开行情来源">
+              <option value="binance">Binance 行情</option>
+              <option value="bybit">Bybit 行情</option>
+            </select>
+            <select id="marketSelect" class="field" aria-label="选择交易市场"></select>
+            <select id="intervalSelect" class="field" aria-label="K线周期">
+              <option value="1m">1 分钟</option>
+              <option value="5m">5 分钟</option>
+              <option value="15m">15 分钟</option>
+            </select>
+            <select id="marketTypeSelect" class="field" aria-label="按市场类型筛选">
+              <option value="all">全部市场</option>
+              <option value="spot">现货</option>
+              <option value="futures">永续合约</option>
+              <option value="forex">外汇演示</option>
+            </select>
+          </div>
+          <div class="terminal-status">
+            <span id="marketDataStatus" class="status-pill">正在连接公开行情…</span>
+            <span id="marketDataSource" class="status-pill">只读行情 · 不提交交易</span>
+            <span id="marketKind" class="status-pill">—</span>
+          </div>
+          <div class="terminal-price">
+            <span id="marketName" class="quote-name">—</span>
+            <span id="marketLast" class="terminal-last">$—</span>
+            <span id="marketChange" class="quote-meta">—</span>
+          </div>
+          <div class="candle-wrap"><canvas id="candleChart" aria-label="实时虚拟市场 K 线图"></canvas></div>
+          <div class="terminal-trade-grid">
+            <div class="market-order">
+              <div class="card-heading">
+                <div><h2>模拟委托</h2><div id="marketOrderType" class="section-note">虚拟资金，与旧账户分开</div></div>
+                <span class="market-tag">余额 <span id="marketCash">$100,000</span></span>
+              </div>
+              <div class="form-row">
+                <label for="marketQty">下单数量（基础货币 / 合约单位）</label>
+                <input id="marketQty" class="field" type="number" min="0.0001" step="0.0001" value="0.001" inputmode="decimal">
+              </div>
+              <div class="form-row" id="leverageRow">
+                <label for="leverageSelect">杠杆（仅模拟永续合约）</label>
+                <select id="leverageSelect" class="field">
+                  <option value="2">2×</option><option value="5" selected>5×</option>
+                  <option value="10">10×</option><option value="20">20×</option>
+                </select>
+              </div>
+              <div class="order-summary"><span>模拟名义金额</span><strong id="marketNotional">$—</strong></div>
+              <div class="order-summary"><span>预估占用保证金</span><strong id="marketMargin">$—</strong></div>
+              <div class="order-summary"><span>多市场模拟净值（扣除欠款）</span><strong id="marketEquity">$100,000.00</strong></div>
+              <div id="spotActions" class="order-actions">
+                <button id="marketBuy" class="button buy">买入</button>
+                <button id="marketSell" class="button sell">卖出</button>
+                <button id="marketClose" class="button" disabled>无持仓</button>
+              </div>
+              <div id="futuresActions" class="order-actions" hidden>
+                <button id="marketLong" class="button buy">开多</button>
+                <button id="marketShort" class="button sell">开空</button>
+                <button id="marketCloseFuture" class="button" disabled>平仓</button>
+              </div>
+              <div id="marketOrderHint" class="hint" role="status">请选择市场。真实下单已禁用。</div>
+              <div class="risk-note">模拟订单仅用于学习。杠杆会放大盈亏并可能触发模拟强平；永续合约不含真实资金费率、撮合或平台清算规则。</div>
+            </div>
+            <div>
+              <h2>模拟持仓</h2>
+              <div id="marketPositions" class="log-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>我的持仓</h2><div class="section-note">买入均价与浮动盈亏随模拟行情更新</div></div>
+            <span class="market-tag">纸上交易</span>
+          </div>
+          <div id="holdings"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>交易记录</h2><div class="section-note">最近的模拟成交</div></div>
+          </div>
+          <div id="tradeLog" class="log-list"></div>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="card order-card">
+          <div class="order-top">
+            <div><h2>下单面板</h2><div class="section-note">选择标的与股数</div></div>
+            <span class="market-tag">第 <span id="orderDay">1</span> 天</span>
+          </div>
+          <div class="form-row">
+            <label for="orderStock">交易标的</label>
+            <select id="orderStock" class="field"></select>
+          </div>
+          <div class="form-row">
+            <label for="orderQty">数量（股）</label>
+            <input id="orderQty" class="field" type="number" min="1" step="1" value="10" inputmode="numeric">
+          </div>
+          <div class="order-summary"><span>参考现价</span><strong id="orderPrice">$—</strong></div>
+          <div class="order-summary"><span>预计金额</span><strong id="orderTotal">$—</strong></div>
+          <div class="trade-buttons">
+            <button id="buyBtn" class="button buy">买入</button>
+            <button id="sellBtn" class="button sell">卖出</button>
+          </div>
+          <div id="orderHint" class="hint" role="status">成交后可在“我的持仓”查看。</div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>模拟借贷服务</h2><div class="section-note">仅在本机模拟账户记账</div></div>
+            <span class="market-tag">非真实信用</span>
+          </div>
+          <div class="loan-stats">
+            <div class="loan-metric"><span class="stat-label">未偿本金</span><strong id="loanPrincipal">$0.00</strong></div>
+            <div class="loan-metric"><span class="stat-label">累计模拟利息</span><strong id="loanInterest">$0.00</strong></div>
+          </div>
+          <div class="form-row">
+            <label for="loanAmount">借入 / 归还金额（模拟美元）</label>
+            <input id="loanAmount" class="field" type="number" min="1" step="100" value="1000" inputmode="decimal">
+          </div>
+          <div class="loan-row">
+            <button id="borrowBtn" class="button">模拟借入</button>
+            <button id="repayBtn" class="button">模拟还款</button>
+          </div>
+          <div id="loanHint" class="risk-note">模拟年化利率 10.95%，按推进的游戏日计息；借款不计入净资产。</div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>AI 股东榜</h2><div class="section-note">各路策略，谁能跑赢市场？</div></div>
+          </div>
+          <div id="leaderboard" class="rank-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>市场电讯</h2><div class="section-note">AI 股东的观点与市场事件</div></div>
+          </div>
+          <div id="feed" class="feed" aria-live="polite"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-heading">
+            <div><h2>模拟竞赛榜</h2><div class="section-note">10,000 个模拟席位 · 仅展示模拟前 100 名</div></div>
+          </div>
+          <div id="tournamentRank" class="section-note">计算模拟排名中…</div>
+          <div id="tournamentList" class="tournament-list"></div>
+          <div class="page-controls">
+            <button id="rankPrev" class="button" disabled>上一页</button>
+            <span id="rankPage" class="page-label">第 1 / 10 页</span>
+            <button id="rankNext" class="button">下一页</button>
+          </div>
+          <div class="leaderboard-disclaimer">榜内 9,999 个对手均由本地算法生成，不是真实用户。此榜不是实盘交易榜，也不提供进入真实交易或收益承诺。</div>
+        </section>
+      </aside>
+    </main>
+    <footer class="footer">股票、AI 对战、交易委托、合约、外汇、借贷与排行榜均为本地模拟，不是真实投资建议或金融服务。加密行情仅从所选交易所公开 WebSocket 只读订阅；连接失败时显示模拟演示价格。真实交易、实名用户榜与借贷需独立后端、授权、合规和风控，本页面不提供这些服务。</footer>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "virtual-capital-arena-v1";
+      const MARKET_STORAGE_KEY = "virtual-capital-market-v1";
+      const INITIAL_CASH = 100000;
+      const MARKET_INITIAL_CASH = 100000;
+      const marketAssets = [
+        { id: "BTCUSDT", symbol: "BTCUSDT", name: "Bitcoin / USDT", type: "spot", initial: 65000, vol: 0.0025, digits: 2 },
+        { id: "ETHUSDT", symbol: "ETHUSDT", name: "Ethereum / USDT", type: "spot", initial: 3200, vol: 0.0032, digits: 2 },
+        { id: "SOLUSDT", symbol: "SOLUSDT", name: "Solana / USDT", type: "spot", initial: 145, vol: 0.005, digits: 3 },
+        { id: "XRPUSDT", symbol: "XRPUSDT", name: "XRP / USDT", type: "spot", initial: 0.62, vol: 0.0045, digits: 5 },
+        { id: "BTC-PERP", symbol: "BTCUSDT", name: "BTC 永续", type: "futures", initial: 65000, vol: 0.0025, digits: 2 },
+        { id: "ETH-PERP", symbol: "ETHUSDT", name: "ETH 永续", type: "futures", initial: 3200, vol: 0.0032, digits: 2 },
+        { id: "SOL-PERP", symbol: "SOLUSDT", name: "SOL 永续", type: "futures", initial: 145, vol: 0.005, digits: 3 },
+        { id: "EURUSD", symbol: null, name: "EUR / USD", type: "forex", initial: 1.08, vol: 0.0008, digits: 5 },
+        { id: "USDJPY", symbol: null, name: "USD / JPY", type: "forex", initial: 150, vol: 0.0007, digits: 3 },
+        { id: "GBPUSD", symbol: null, name: "GBP / USD", type: "forex", initial: 1.27, vol: 0.001, digits: 5 }
+      ];
+      const assets = [
+        { id: "NOVA", name: "新星算力", sector: "云端计算", initial: 82.4, drift: 0.0014, vol: 0.028, color: "#72a8ff" },
+        { id: "LUMA", name: "极光能源", sector: "清洁能源", initial: 46.8, drift: 0.0007, vol: 0.022, color: "#41d6a3" },
+        { id: "MORI", name: "森屿消费", sector: "新消费", initial: 31.6, drift: 0.0004, vol: 0.017, color: "#f6c76b" },
+        { id: "PICO", name: "像素芯片", sector: "半导体", initial: 128.2, drift: 0.0010, vol: 0.036, color: "#c29aff" }
+      ];
+      const aiProfiles = [
+        { id: "atlas", name: "阿特拉斯", style: "趋势派 · 顺势而为", color: "#7fb2ff" },
+        { id: "moss", name: "苔藓", style: "价值派 · 慢慢积累", color: "#70d5a5" },
+        { id: "spark", name: "火花", style: "波段派 · 灵活进出", color: "#ffbd72" }
+      ];
+      const events = [
+        { title: "新品发布会", text: "新星算力公布下一代推理芯片，科技板块情绪升温。", target: "NOVA", impact: 0.065 },
+        { title: "电网扩容计划", text: "多地扩大储能设施建设，清洁能源受到关注。", target: "LUMA", impact: 0.055 },
+        { title: "消费信心回暖", text: "本季度消费者信心指数好于预期，零售股迎来买盘。", target: "MORI", impact: 0.045 },
+        { title: "供应链预警", text: "关键元件交付延迟的消息令半导体板块承压。", target: "PICO", impact: -0.07 },
+        { title: "监管风声", text: "市场传出行业监管讨论，成长型股票短线震荡加剧。", target: "NOVA", impact: -0.055 },
+        { title: "海外市场波动", text: "全球风险偏好回落，投资者暂时转向观望。", target: null, impact: -0.025 },
+        { title: "业绩超预期", text: "一家消费品牌公布亮眼季报，市场开始重新评估估值。", target: "MORI", impact: 0.05 },
+        { title: "储能突破", text: "新型电池测试数据公布，能源板块成交明显活跃。", target: "LUMA", impact: 0.06 }
+      ];
+      const $ = (id) => document.getElementById(id);
+      const fmtMoney = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtSigned = (n) => (n > 0 ? "+" : "") + Number(n).toFixed(2) + "%";
+      const tone = (n) => n > 0.00001 ? "positive" : n < -0.00001 ? "negative" : "neutral";
+      const pricePrecision = (n) => n < 10 ? 3 : 2;
+      const fmtPrice = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const clamp = (n, low, high) => Math.min(high, Math.max(low, n));
+      const randomNormal = () => {
+        let total = 0;
+        for (let i = 0; i < 6; i++) total += Math.random();
+        return (total - 3) * 1.414;
+      };
+
+      function makeSeedCandles(initial, vol, count = 80) {
+        const candles = [];
+        let close = initial;
+        const now = Math.floor(Date.now() / 60000) * 60000;
+        for (let i = count - 1; i >= 0; i--) {
+          const open = close;
+          close = Math.max(initial * 0.15, open * (1 + randomNormal() * vol));
+          const spread = Math.abs(close - open) + open * vol * 0.25;
+          candles.push({
+            time: now - i * 60000,
+            open: Number(open.toPrecision(8)),
+            high: Number((Math.max(open, close) + Math.random() * spread).toPrecision(8)),
+            low: Number(Math.max(initial * 0.1, Math.min(open, close) - Math.random() * spread).toPrecision(8)),
+            close: Number(close.toPrecision(8)),
+            volume: 0,
+            demo: true
+          });
+        }
+        return candles;
+      }
+
+      function newMarketGame() {
+        const quotes = {};
+        marketAssets.forEach((asset) => {
+          const candles = makeSeedCandles(asset.initial, asset.vol);
+          quotes[asset.id] = {
+            price: candles[candles.length - 1].close,
+            candles,
+            previous: candles[candles.length - 2].close,
+            live: false,
+            historyLive: false,
+            volume: 0
+          };
+        });
+        return {
+          cash: MARKET_INITIAL_CASH,
+          spotPositions: {},
+          leveragedPositions: {},
+          loanPrincipal: 0,
+          loanInterest: 0,
+          day: 1,
+          quotes,
+          trades: []
+        };
+      }
+
+      function loadMarketGame() {
+        const fresh = newMarketGame();
+        try {
+          const raw = localStorage.getItem(MARKET_STORAGE_KEY);
+          if (!raw) return fresh;
+          const saved = JSON.parse(raw);
+          if (!saved || typeof saved.cash !== "number" || !saved.quotes) return fresh;
+          marketAssets.forEach((asset) => {
+            const quote = saved.quotes[asset.id];
+            if (!quote || !Array.isArray(quote.candles) || !Number.isFinite(quote.price)) {
+              saved.quotes[asset.id] = fresh.quotes[asset.id];
+            }
+          });
+          const loaded = {
+            ...fresh,
+            ...saved,
+            spotPositions: saved.spotPositions || {},
+            leveragedPositions: saved.leveragedPositions || {},
+            loanPrincipal: Number(saved.loanPrincipal) || 0,
+            loanInterest: Number(saved.loanInterest) || 0,
+            trades: Array.isArray(saved.trades) ? saved.trades.slice(0, 100) : []
+          };
+          marketAssets.forEach((asset) => { loaded.quotes[asset.id].live = false; });
+          return loaded;
+        } catch (error) {
+          console.warn("读取模拟多市场存档失败，已初始化新账户。", error);
+          return fresh;
+        }
+      }
+
+      const marketGame = loadMarketGame();
+      const tournamentPlayers = (() => {
+        const names = ["青山", "长风", "海盐", "白露", "星河", "南枝", "远帆", "云杉", "明川", "秋水", "北辰", "木棉"];
+        return Array.from({ length: 9999 }, (_, index) => {
+          const value = Math.imul(index + 1, 1664525) + 1013904223 >>> 0;
+          const performance = -0.1 + value / 4294967295 * 0.4;
+          return {
+            id: index + 1,
+            name: `${names[index % names.length]}·模拟${String(index + 1).padStart(4, "0")}`,
+            equity: MARKET_INITIAL_CASH * (1 + performance),
+            performance
+          };
+        }).sort((a, b) => b.equity - a.equity || a.id - b.id);
+      })();
+      let tournamentPage = 1;
+      let marketSocket = null;
+      let marketSocketRetry = null;
+      let marketFallbackTimer = null;
+      let marketSaveTimer = null;
+      let marketSelectedId = "BTCUSDT";
+      let marketVenue = "binance";
+      let marketInterval = "1m";
+      let marketSocketAttempt = 0;
+      let lastLiveMessageAt = 0;
+
+      function newGame() {
+        const prices = {};
+        assets.forEach((asset) => {
+          let price = asset.initial;
+          const history = [];
+          for (let i = 0; i < 24; i++) {
+            price *= 1 + asset.drift * 0.3 + randomNormal() * asset.vol * 0.42;
+            history.push(Number(price.toFixed(3)));
+          }
+          prices[asset.id] = { current: Number(price.toFixed(3)), history, previous: Number(price.toFixed(3)), change: 0, volume: 0 };
+        });
+        return {
+          day: 1,
+          date: new Date(2026, 9, 1).toISOString().slice(0, 10),
+          cash: INITIAL_CASH,
+          positions: {},
+          prices,
+          ai: aiProfiles.map((profile, index) => ({
+            ...profile,
+            cash: INITIAL_CASH,
+            positions: {},
+            seed: index + 1
+          })),
+          trades: [],
+          feed: [
+            { day: 1, type: "event", text: "欢迎来到虚拟资本论。研究公司、管理仓位，和三位 AI 股东一决高下。" },
+            { day: 1, type: "trade", text: "AI 股东已入场：阿特拉斯关注趋势，苔藓寻找价值，火花等待波段机会。" }
+          ]
+        };
+      }
+
+      function loadGame() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return newGame();
+          const saved = JSON.parse(raw);
+          if (!saved || typeof saved.day !== "number" || !saved.prices || !Array.isArray(saved.ai)) return newGame();
+          assets.forEach((asset) => {
+            if (!saved.prices[asset.id] || !Array.isArray(saved.prices[asset.id].history)) throw new Error("存档结构不完整");
+          });
+          return saved;
+        } catch (error) {
+          console.warn("读取本地游戏进度失败，已开启新游戏。", error);
+          return newGame();
+        }
+      }
+
+      let state = loadGame();
+      let selectedId = assets[0].id;
+      let toastTimer;
+
+      function saveGame() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          console.error("保存本地游戏进度失败。", error);
+          showToast("本地存档无法写入；请检查浏览器存储空间或隐私设置。");
+        }
+      }
+
+      function getAsset(id) { return assets.find((asset) => asset.id === id); }
+      function getPrice(id) { return state.prices[id].current; }
+      function positionValue(positions, id) { return (positions[id]?.qty || 0) * getPrice(id); }
+      function portfolioValue(positions) { return assets.reduce((sum, asset) => sum + positionValue(positions, asset.id), 0); }
+      function playerEquity() { return state.cash + portfolioValue(state.positions); }
+      function aiEquity(player) { return player.cash + portfolioValue(player.positions); }
+      function totalReturn(equity) { return (equity / INITIAL_CASH - 1) * 100; }
+      function getMarketAsset(id = marketSelectedId) { return marketAssets.find((asset) => asset.id === id); }
+      function getMarketQuote(id = marketSelectedId) { return marketGame.quotes[id]; }
+      function getMarketPrice(id = marketSelectedId) { return getMarketQuote(id).price; }
+      function isLeveragedMarket(asset = getMarketAsset()) { return asset.type === "futures" || asset.type === "forex"; }
+      function marketPosition(asset = getMarketAsset()) {
+        return isLeveragedMarket(asset)
+          ? marketGame.leveragedPositions[asset.id]
+          : marketGame.spotPositions[asset.id];
+      }
+      function marketUnrealized(position, price) {
+        return position ? (price - position.avg) * position.qty : 0;
+      }
+      function marketEquity() {
+        const spotValue = marketAssets.filter((asset) => asset.type === "spot")
+          .reduce((sum, asset) => sum + (marketGame.spotPositions[asset.id]?.qty || 0) * marketGame.quotes[asset.id].price, 0);
+        const marginValue = marketAssets.filter(isLeveragedMarket)
+          .reduce((sum, asset) => {
+            const position = marketGame.leveragedPositions[asset.id];
+            return sum + (position ? position.margin + marketUnrealized(position, marketGame.quotes[asset.id].price) : 0);
+          }, 0);
+        return marketGame.cash + spotValue + marginValue - marketGame.loanPrincipal - marketGame.loanInterest;
+      }
+
+      function saveMarketGame() {
+        try {
+          localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketGame));
+        } catch (error) {
+          console.error("保存模拟多市场存档失败。", error);
+          $("marketOrderHint").textContent = "模拟账户未能保存到本机；请检查浏览器存储设置。";
+        }
+      }
+
+      function scheduleMarketSave() {
+        if (marketSaveTimer) return;
+        marketSaveTimer = setTimeout(() => {
+          marketSaveTimer = null;
+          saveMarketGame();
+        }, 1200);
+      }
+
+      function renderTournament() {
+        const equity = marketEquity();
+        const betterPlayers = tournamentPlayers.filter((player) => player.equity > equity);
+        const playerRank = betterPlayers.length + 1;
+        const pageCount = 10;
+        const pageStart = (tournamentPage - 1) * 10;
+        const pagePlayers = tournamentPlayers.slice(pageStart, pageStart + 10)
+          .map((player, index) => ({ ...player, rank: pageStart + index + 1, isPlayer: false }));
+        if (playerRank <= 100 && playerRank > pageStart && playerRank <= pageStart + 10) {
+          pagePlayers.push({
+            id: "you",
+            name: "你 · 本地模拟账户",
+            equity,
+            performance: equity / MARKET_INITIAL_CASH - 1,
+            rank: playerRank,
+            isPlayer: true
+          });
+        }
+        pagePlayers.sort((a, b) => a.rank - b.rank);
+        $("tournamentRank").textContent = `模拟账户净值 ${fmtMoney(equity)} · 总榜第 ${playerRank.toLocaleString()} / 10,000 名${playerRank <= 100 ? " · 已进入模拟前 100" : " · 尚未进入模拟前 100"}`;
+        $("tournamentList").innerHTML = pagePlayers.map((player) =>
+          `<div class="tournament-row ${player.isPlayer ? "self" : ""}">
+            <div class="tournament-rank">${player.rank}</div>
+            <div class="tournament-name">${player.name}</div>
+            <div class="tournament-return ${tone(player.performance)}">${fmtSigned(player.performance * 100)}%</div>
+          </div>`
+        ).join("");
+        $("rankPage").textContent = `第 ${tournamentPage} / ${pageCount} 页 · 前 100`;
+        $("rankPrev").disabled = tournamentPage <= 1;
+        $("rankNext").disabled = tournamentPage >= pageCount;
+      }
+
+      function renderCandleChart() {
+        const canvas = $("candleChart");
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(280, rect.width);
+        const height = Math.max(180, rect.height);
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        const ctx = canvas.getContext("2d");
+        ctx.scale(ratio, ratio);
+        ctx.clearRect(0, 0, width, height);
+        const quote = getMarketQuote();
+        const candles = quote.candles.slice(-80);
+        if (!candles.length) return;
+        const left = 62, right = 12, top = 14, bottom = 25;
+        const plotW = width - left - right;
+        const plotH = height - top - bottom;
+        let min = Math.min(...candles.map((candle) => candle.low));
+        let max = Math.max(...candles.map((candle) => candle.high));
+        const padding = Math.max((max - min) * 0.1, max * 0.0007);
+        min -= padding;
+        max += padding;
+        const yFor = (value) => top + (max - value) / (max - min) * plotH;
+        ctx.font = "10px system-ui, sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (let i = 0; i <= 4; i++) {
+          const y = top + plotH * i / 4;
+          const value = max - (max - min) * i / 4;
+          ctx.strokeStyle = "#233047";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+          ctx.fillStyle = "#8190a8";
+          ctx.fillText(value.toLocaleString("en-US", { maximumFractionDigits: getMarketAsset().digits }), left - 7, y);
+        }
+        const step = plotW / candles.length;
+        const bodyWidth = Math.max(2, Math.min(9, step * 0.62));
+        candles.forEach((candle, index) => {
+          const x = left + step * (index + 0.5);
+          const up = candle.close >= candle.open;
+          const color = up ? "#41d6a3" : "#ff7185";
+          ctx.strokeStyle = color;
+          ctx.fillStyle = color;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, yFor(candle.high));
+          ctx.lineTo(x, yFor(candle.low));
+          ctx.stroke();
+          const yOpen = yFor(candle.open);
+          const yClose = yFor(candle.close);
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
+          ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+        });
+        ctx.fillStyle = "#73819a";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        const now = new Date(candles[candles.length - 1].time);
+        ctx.fillText(`${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${marketInterval}`, left, height - 16);
+        ctx.textAlign = "right";
+        ctx.fillText(quote.historyLive ? "交易所 K 线" : "演示 K 线", width - right, height - 16);
+      }
+
+      function renderMarketPositions() {
+        const rows = marketAssets.filter((asset) => marketPosition(asset));
+        if (!rows.length) {
+          $("marketPositions").innerHTML = '<div class="empty">当前没有多市场模拟持仓。</div>';
+          return;
+        }
+        $("marketPositions").innerHTML = rows.map((asset) => {
+          const position = marketPosition(asset);
+          const pnl = isLeveragedMarket(asset)
+            ? marketUnrealized(position, getMarketPrice(asset.id))
+            : (getMarketPrice(asset.id) - position.avg) * position.qty;
+          const amount = Math.abs(position.qty);
+          const label = isLeveragedMarket(asset) ? (position.qty > 0 ? "多" : "空") : "现货";
+          return `<div class="log-row">
+            <div class="log-side ${tone(pnl)}">${label}</div>
+            <div class="log-detail">${asset.name} · ${amount.toFixed(amount < 1 ? 4 : 2)} · 均价 ${fmtPrice(position.avg)}</div>
+            <div class="log-total ${tone(pnl)}">${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}</div>
+          </div>`;
+        }).join("");
+      }
+
+      function renderMarketTerminal() {
+        const asset = getMarketAsset();
+        const quote = getMarketQuote();
+        if (!asset || !quote) return;
+        const change = quote.previous ? (quote.price / quote.previous - 1) * 100 : 0;
+        $("marketName").textContent = `${asset.name} · ${asset.id}`;
+        $("marketLast").textContent = quote.price.toLocaleString("en-US", { minimumFractionDigits: asset.digits, maximumFractionDigits: asset.digits });
+        $("marketChange").textContent = `${fmtSigned(change)} ${quote.live ? "实时" : "模拟"}`;
+        $("marketChange").className = "quote-meta " + tone(change);
+        $("marketKind").textContent = asset.type === "spot" ? "现货" : asset.type === "futures" ? "模拟永续合约" : "外汇模拟";
+        $("marketOrderType").textContent = asset.type === "spot" ? "模拟现货 · 现金全额结算" : asset.type === "futures" ? "模拟永续 · 独立保证金" : "模拟外汇 · 虚拟保证金";
+        $("marketCash").textContent = fmtMoney(marketGame.cash);
+        $("marketEquity").textContent = fmtMoney(marketEquity());
+        $("leverageRow").hidden = !isLeveragedMarket(asset);
+        $("spotActions").hidden = isLeveragedMarket(asset);
+        $("futuresActions").hidden = !isLeveragedMarket(asset);
+        $("marketDataSource").textContent = asset.type === "forex"
+          ? "演示报价 · 非实时"
+          : quote.live
+            ? `公开 ${marketVenue === "binance" ? "Binance" : "Bybit"} 行情 · 只读`
+            : "公开行情连接中 / 不提交交易";
+        $("marketDataStatus").textContent = asset.type === "forex"
+          ? "离线演示"
+          : quote.live ? "● 实时连接" : "○ 等待行情 / 演示价格";
+        $("marketDataStatus").className = "status-pill " + (quote.live ? "positive" : "neutral");
+        const qty = Math.max(0, Number($("marketQty").value) || 0);
+        const notional = qty * quote.price;
+        const leverage = Number($("leverageSelect").value) || 1;
+        $("marketNotional").textContent = fmtMoney(notional);
+        $("marketMargin").textContent = fmtMoney(isLeveragedMarket(asset) ? notional / leverage : notional);
+        const position = marketPosition(asset);
+        if (isLeveragedMarket(asset)) {
+          $("marketCloseFuture").disabled = !position;
+          $("marketCloseFuture").textContent = position ? "平仓" : "无持仓";
+          $("marketLong").disabled = Boolean(position && position.qty < 0);
+          $("marketShort").disabled = Boolean(position && position.qty > 0);
+        } else {
+          $("marketClose").disabled = !position;
+          $("marketClose").textContent = position ? "全部卖出" : "无持仓";
+          $("marketSell").disabled = !position;
+          $("marketBuy").disabled = false;
+        }
+        $("loanPrincipal").textContent = fmtMoney(marketGame.loanPrincipal);
+        $("loanInterest").textContent = fmtMoney(marketGame.loanInterest);
+        $("loanHint").textContent = `模拟年化利率 10.95%，按推进的游戏日计息；借款不计入净资产。模拟可借上限 ${fmtMoney(MARKET_INITIAL_CASH * 0.5)}。`;
+        renderCandleChart();
+        renderMarketPositions();
+        renderTournament();
+        scheduleMarketSave();
+      }
+
+      function selectMarketOptions() {
+        const currentType = $("marketTypeSelect").value;
+        const choices = marketAssets.filter((asset) => currentType === "all" || asset.type === currentType);
+        const select = $("marketSelect");
+        if (!choices.some((asset) => asset.id === marketSelectedId)) {
+          marketSelectedId = choices[0]?.id || marketAssets[0].id;
+        }
+        select.innerHTML = choices.map((asset) =>
+          `<option value="${asset.id}">${asset.name} · ${asset.type === "spot" ? "现货" : asset.type === "futures" ? "永续" : "外汇演示"}</option>`
+        ).join("");
+        select.value = marketSelectedId;
+        renderMarketTerminal();
+      }
+
+      function updateMarketCandle(candle) {
+        const quote = getMarketQuote();
+        quote.live = !candle.demo;
+        if (!candle.demo) quote.historyLive = true;
+        const last = quote.candles[quote.candles.length - 1];
+        if (last && last.time === candle.time) {
+          quote.candles[quote.candles.length - 1] = { ...last, ...candle };
+        } else {
+          if (last) quote.previous = last.close;
+          quote.candles.push(candle);
+          if (quote.candles.length > 300) quote.candles.shift();
+        }
+        quote.price = candle.close;
+        quote.volume = candle.volume || quote.volume;
+        const marginPosition = marketGame.leveragedPositions[marketSelectedId];
+        if (marginPosition && marginPosition.margin > 0 &&
+            marketUnrealized(marginPosition, quote.price) <= -marginPosition.margin * 0.8) {
+          const loss = marketUnrealized(marginPosition, quote.price);
+          marketGame.cash += marginPosition.margin + Math.max(loss, -marginPosition.margin);
+          delete marketGame.leveragedPositions[marketSelectedId];
+          showToast(`${getMarketAsset().name} 触发模拟强平；真实平台规则可能不同。`);
+        }
+        renderMarketTerminal();
+      }
+
+      function handleLiveMessage(raw) {
+        let message;
+        try {
+          message = JSON.parse(raw);
+        } catch (error) {
+          console.warn("忽略无法解析的行情消息。", error);
+          return;
+        }
+        lastLiveMessageAt = Date.now();
+        if (marketVenue === "binance") {
+          const data = message.data || message;
+          const candle = data.k;
+          if (!candle || !Number.isFinite(Number(candle.c))) return;
+          updateMarketCandle({
+            time: Number(candle.t),
+            open: Number(candle.o),
+            high: Number(candle.h),
+            low: Number(candle.l),
+            close: Number(candle.c),
+            volume: Number(candle.v),
+            demo: false
+          });
+        } else {
+          const topic = String(message.topic || "");
+          const candles = message.data;
+          if (!topic.startsWith("kline.") || !Array.isArray(candles) || !candles.length) return;
+          const candle = candles[candles.length - 1];
+          updateMarketCandle({
+            time: Number(candle.start),
+            open: Number(candle.open),
+            high: Number(candle.high),
+            low: Number(candle.low),
+            close: Number(candle.close),
+            volume: Number(candle.volume),
+            demo: false
+          });
+        }
+      }
+
+      async function loadMarketHistory() {
+        const asset = getMarketAsset();
+        if (asset.type === "forex") return;
+        const interval = marketInterval;
+        const venue = marketVenue;
+        const selected = marketSelectedId;
+        const intervalMap = { "1m": "1m", "5m": "5m", "15m": "15m" };
+        const symbol = asset.symbol;
+        const url = venue === "binance"
+          ? `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${intervalMap[interval]}&limit=100`
+          : `https://api.bybit.com/v5/market/kline?category=spot&symbol=${symbol}&interval=${interval === "1m" ? "1" : interval === "5m" ? "5" : "15"}&limit=100`;
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) throw new Error(`历史行情请求失败（HTTP ${response.status}）`);
+          const payload = await response.json();
+          if (marketVenue !== venue || marketSelectedId !== selected || marketInterval !== interval) return;
+          const rows = venue === "binance"
+            ? payload
+            : payload.result?.list?.slice().reverse();
+          if (!Array.isArray(rows) || !rows.length) throw new Error("交易所没有返回 K 线数据");
+          const candles = rows.map((row) => venue === "binance"
+            ? { time: Number(row[0]), open: Number(row[1]), high: Number(row[2]), low: Number(row[3]), close: Number(row[4]), volume: Number(row[5]), demo: false }
+            : { time: Number(row[0]), open: Number(row[1]), high: Number(row[2]), low: Number(row[3]), close: Number(row[4]), volume: Number(row[5]), demo: false }
+          ).filter((candle) => Number.isFinite(candle.close) && candle.close > 0);
+          if (!candles.length) throw new Error("返回的 K 线数据无效");
+          const quote = marketGame.quotes[selected];
+          quote.candles = candles;
+          quote.previous = candles[candles.length - 2]?.close || candles[candles.length - 1].open;
+          quote.price = candles[candles.length - 1].close;
+          quote.live = false;
+          quote.historyLive = true;
+          renderMarketTerminal();
+        } catch (error) {
+          console.warn("无法读取交易所公开历史 K 线，继续显示演示图表。", error);
+          if (marketSelectedId === selected) {
+            $("marketDataStatus").textContent = "历史行情不可用 · 演示 K 线";
+            $("marketDataSource").textContent = "网络 / 交易所 API 不可用";
+          }
+        }
+      }
+
+      function closeMarketSocket() {
+        clearTimeout(marketSocketRetry);
+        marketSocketRetry = null;
+        if (marketSocket) {
+          marketSocket.onopen = null;
+          marketSocket.onmessage = null;
+          marketSocket.onerror = null;
+          marketSocket.onclose = null;
+          try { marketSocket.close(); } catch (error) { console.warn("关闭行情连接失败。", error); }
+          marketSocket = null;
+        }
+      }
+
+      function startMarketFallback() {
+        clearInterval(marketFallbackTimer);
+        marketFallbackTimer = setInterval(() => {
+          const asset = getMarketAsset();
+          if (asset.type !== "forex" && getMarketQuote().live && Date.now() - lastLiveMessageAt < 10000) return;
+          const quote = getMarketQuote();
+          const previous = quote.price;
+          const next = Math.max(asset.initial * 0.15, previous * (1 + randomNormal() * asset.vol * (asset.type === "forex" ? 0.2 : 0.35)));
+          const span = Math.abs(next - previous) + previous * asset.vol * 0.1;
+          const intervalMs = marketInterval === "15m" ? 900000 : marketInterval === "5m" ? 300000 : 60000;
+          const time = Math.floor(Date.now() / intervalMs) * intervalMs;
+          updateMarketCandle({
+            time,
+            open: quote.candles.at(-1)?.time === time ? quote.candles.at(-1).open : previous,
+            high: Math.max(previous, next) + Math.random() * span,
+            low: Math.max(asset.initial * 0.1, Math.min(previous, next) - Math.random() * span),
+            close: next,
+            volume: 0,
+            demo: true
+          });
+        }, 3000);
+      }
+
+      function connectMarketFeed() {
+        closeMarketSocket();
+        clearInterval(marketFallbackTimer);
+        const asset = getMarketAsset();
+        if (asset.type === "forex") {
+          $("marketDataStatus").textContent = "离线演示";
+          $("marketDataSource").textContent = "外汇价格为程序演示值，非实时数据";
+          startMarketFallback();
+          return;
+        }
+        if (!window.WebSocket) {
+          $("marketDataStatus").textContent = "浏览器不支持 WebSocket";
+          startMarketFallback();
+          return;
+        }
+        const interval = marketInterval;
+        const symbol = asset.symbol.toLowerCase();
+        const url = marketVenue === "binance"
+          ? `wss://stream.binance.com:9443/ws/${symbol}@kline_${interval}`
+          : "wss://stream.bybit.com/v5/public/spot";
+        try {
+          const socket = new WebSocket(url);
+          marketSocket = socket;
+          $("marketDataStatus").textContent = `连接 ${marketVenue === "binance" ? "Binance" : "Bybit"} 公开行情…`;
+          if (marketVenue === "binance") {
+            socket.onopen = () => { marketSocketAttempt = 0; };
+          } else {
+            socket.onopen = () => {
+              marketSocketAttempt = 0;
+              socket.send(JSON.stringify({ op: "subscribe", args: [`kline.${interval === "1m" ? "1" : interval === "5m" ? "5" : "15"}.${asset.symbol}`] }));
+            };
+          }
+          socket.onmessage = (event) => handleLiveMessage(event.data);
+          socket.onerror = () => {
+            $("marketDataStatus").textContent = "实时行情连接错误 · 使用演示行情";
+            $("marketDataSource").textContent = "只读公开源不可用；未连接交易账户";
+          };
+          socket.onclose = () => {
+            if (marketSocket !== socket) return;
+            marketSocket = null;
+            $("marketDataStatus").textContent = "行情断线 · 正在重连";
+            const delay = Math.min(30000, 1000 * (2 ** Math.min(marketSocketAttempt++, 5)));
+            marketSocketRetry = setTimeout(connectMarketFeed, delay);
+          };
+          loadMarketHistory();
+          startMarketFallback();
+        } catch (error) {
+          console.warn("行情 WebSocket 连接失败，切换演示行情。", error);
+          $("marketDataStatus").textContent = "无法连接 · 演示行情";
+          $("marketDataSource").textContent = "只读市场数据不可用";
+          startMarketFallback();
+        }
+      }
+
+      function openLeveragedPosition(direction) {
+        const asset = getMarketAsset();
+        const price = getMarketPrice();
+        const qty = Number($("marketQty").value);
+        const leverage = Number($("leverageSelect").value);
+        if (!isLeveragedMarket(asset) || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(leverage)) {
+          $("marketOrderHint").textContent = "请输入有效数量并选择杠杆倍数。";
+          return;
+        }
+        const existing = marketGame.leveragedPositions[asset.id];
+        if (existing && Math.sign(existing.qty) !== direction) {
+          $("marketOrderHint").textContent = "当前持有反向仓位，请先平仓，再建立新方向仓位。";
+          return;
+        }
+        const signedQty = qty * direction;
+        const margin = Math.abs(qty * price) / leverage;
+        if (margin > marketGame.cash) {
+          $("marketOrderHint").textContent = `模拟可用余额不足，需要保证金 ${fmtMoney(margin)}。`;
+          return;
+        }
+        if (existing) {
+          const oldQty = Math.abs(existing.qty);
+          existing.avg = (oldQty * existing.avg + Math.abs(qty) * price) / (oldQty + Math.abs(qty));
+          existing.qty += signedQty;
+          existing.margin += margin;
+        } else {
+          marketGame.leveragedPositions[asset.id] = { qty: signedQty, avg: price, margin, leverage };
+        }
+        marketGame.cash -= margin;
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: direction > 0 ? "模拟开多" : "模拟开空", qty, price });
+        marketGame.trades = marketGame.trades.slice(0, 100);
+        $("marketOrderHint").textContent = `已模拟${direction > 0 ? "开多" : "开空"} ${qty}，占用保证金 ${fmtMoney(margin)}。`;
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function closeLeveragedPosition() {
+        const asset = getMarketAsset();
+        const position = marketGame.leveragedPositions[asset.id];
+        if (!position) return;
+        const pnl = marketUnrealized(position, getMarketPrice());
+        marketGame.cash += position.margin + Math.max(pnl, -position.margin);
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟平仓", qty: Math.abs(position.qty), price: getMarketPrice() });
+        marketGame.trades = marketGame.trades.slice(0, 100);
+        delete marketGame.leveragedPositions[asset.id];
+        $("marketOrderHint").textContent = `模拟平仓完成，已实现盈亏 ${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}。`;
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function tradeMarketSpot(side) {
+        const asset = getMarketAsset();
+        const quote = getMarketQuote();
+        if (asset.type !== "spot") return;
+        const qty = Number($("marketQty").value);
+        const price = quote.price;
+        if (!Number.isFinite(qty) || qty <= 0) {
+          $("marketOrderHint").textContent = "请输入大于 0 的有效数量。";
+          return;
+        }
+        const position = marketGame.spotPositions[asset.id];
+        if (side === "买入") {
+          const cost = qty * price;
+          if (cost > marketGame.cash) {
+            $("marketOrderHint").textContent = `模拟余额不足，需要 ${fmtMoney(cost)}。`;
+            return;
+          }
+          const oldQty = position?.qty || 0;
+          marketGame.spotPositions[asset.id] = {
+            qty: oldQty + qty,
+            avg: (oldQty * (position?.avg || 0) + cost) / (oldQty + qty)
+          };
+        } else {
+          if (!position || position.qty + 1e-10 < qty) {
+            $("marketOrderHint").textContent = `模拟现货持仓不足，目前持有 ${(position?.qty || 0).toFixed(6)}。`;
+            return;
+          }
+          position.qty -= qty;
+          if (position.qty < 1e-10) delete marketGame.spotPositions[asset.id];
+        }
+        marketGame.cash += (side === "买入" ? -1 : 1) * qty * price;
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: `模拟${side}`, qty, price });
+        marketGame.trades = marketGame.trades.slice(0, 100);
+        $("marketOrderHint").textContent = `模拟${side}${asset.name} ${qty.toFixed(6)}，未向交易所提交订单。`;
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function closeMarketSpot() {
+        const asset = getMarketAsset();
+        const position = marketGame.spotPositions[asset.id];
+        if (!position || asset.type !== "spot") return;
+        const qty = position.qty;
+        const proceeds = qty * getMarketPrice();
+        marketGame.cash += proceeds;
+        delete marketGame.spotPositions[asset.id];
+        marketGame.trades.unshift({ day: state.day, id: asset.id, name: asset.name, side: "模拟全部卖出", qty, price: getMarketPrice() });
+        marketGame.trades = marketGame.trades.slice(0, 100);
+        $("marketOrderHint").textContent = `已模拟全部卖出 ${asset.name}，未向交易所提交订单。`;
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function borrowMarketFunds(repay = false) {
+        const amount = Number($("loanAmount").value);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          $("loanHint").textContent = "请输入大于 0 的模拟金额。";
+          return;
+        }
+        if (repay) {
+          const due = marketGame.loanPrincipal + marketGame.loanInterest;
+          const payment = Math.min(amount, due, marketGame.cash);
+          if (payment <= 0) {
+            $("loanHint").textContent = "没有可归还的欠款，或模拟现金不足。";
+            return;
+          }
+          const interestPaid = Math.min(payment, marketGame.loanInterest);
+          marketGame.loanInterest -= interestPaid;
+          marketGame.loanPrincipal -= Math.min(marketGame.loanPrincipal, payment - interestPaid);
+          marketGame.cash -= payment;
+          $("loanHint").textContent = `已模拟还款 ${fmtMoney(payment)}（先还利息）。`;
+        } else {
+          const limit = MARKET_INITIAL_CASH * 0.5;
+          const available = limit - marketGame.loanPrincipal;
+          if (amount > available) {
+            $("loanHint").textContent = `超过本地模拟额度；剩余可借 ${fmtMoney(Math.max(0, available))}。`;
+            return;
+          }
+          marketGame.loanPrincipal += amount;
+          marketGame.cash += amount;
+          $("loanHint").textContent = `已模拟借入 ${fmtMoney(amount)}；负债会从净资产中扣除。`;
+        }
+        renderMarketTerminal();
+        saveMarketGame();
+      }
+
+      function ensureSelectOptions(select) {
+        select.innerHTML = assets.map((asset) => `<option value="${asset.id}">${asset.name} · ${asset.id}</option>`).join("");
+      }
+
+      function showToast(message) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 2800);
+      }
+
+      function setOrderHint(message, error = false) {
+        $("orderHint").textContent = message;
+        $("orderHint").className = "hint " + (error ? "negative" : "");
+      }
+
+      function renderStats() {
+        const equity = playerEquity();
+        const pnl = equity - INITIAL_CASH;
+        $("equity").textContent = fmtMoney(equity);
+        $("totalPnl").textContent = (pnl >= 0 ? "+" : "−") + fmtMoney(Math.abs(pnl));
+        $("equity").className = "stat-value";
+        $("totalPnl").className = "stat-value " + tone(pnl);
+        $("totalPnlHint").textContent = fmtSigned(totalReturn(equity)) + " 总回报";
+        $("cash").textContent = fmtMoney(state.cash);
+        $("dayBadge").textContent = `第 ${state.day} 天`;
+        $("orderDay").textContent = state.day;
+        $("rank").textContent = "—";
+      }
+
+      function renderQuote() {
+        const asset = getAsset(selectedId);
+        const quote = state.prices[selectedId];
+        const change = quote.change || 0;
+        const changePct = quote.previous ? change / quote.previous * 100 : 0;
+        $("quoteName").textContent = asset.name;
+        $("quotePrice").textContent = fmtPrice(quote.current);
+        $("quoteChange").textContent = `${fmtSigned(changePct)} 今日`;
+        $("quoteChange").className = "quote-meta " + tone(changePct);
+        $("quoteVolume").textContent = `模拟成交量 ${Number(quote.volume || 0).toLocaleString()} 股`;
+        drawChart(asset, quote.history);
+      }
+
+      function drawChart(asset, history) {
+        const canvas = $("priceChart");
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(300, rect.width);
+        const height = Math.max(160, rect.height);
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        const ctx = canvas.getContext("2d");
+        ctx.scale(ratio, ratio);
+        ctx.clearRect(0, 0, width, height);
+        const left = 48, right = 12, top = 14, bottom = 25;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const vals = history.slice(-48);
+        if (vals.length < 2) return;
+        const rawMin = Math.min(...vals), rawMax = Math.max(...vals);
+        const padding = Math.max((rawMax - rawMin) * 0.18, rawMax * 0.012);
+        const min = rawMin - padding, max = rawMax + padding;
+        const yFor = (v) => top + (max - v) / (max - min) * plotH;
+        ctx.font = "10px system-ui, sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (let i = 0; i <= 4; i++) {
+          const y = top + plotH * i / 4;
+          const value = max - (max - min) * i / 4;
+          ctx.strokeStyle = "#233047";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+          ctx.fillStyle = "#8190a8";
+          ctx.fillText("$" + value.toFixed(pricePrecision(value)), left - 8, y);
+        }
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = "#73819a";
+        ctx.fillText("较早", left, height - 15);
+        ctx.fillText("最近", width - right, height - 15);
+        const points = vals.map((value, i) => ({
+          x: left + (plotW * i / (vals.length - 1)),
+          y: yFor(value)
+        }));
+        const gradient = ctx.createLinearGradient(0, top, 0, height - bottom);
+        gradient.addColorStop(0, asset.color + "3b");
+        gradient.addColorStop(1, asset.color + "00");
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, height - bottom);
+        points.forEach((point) => ctx.lineTo(point.x, point.y));
+        ctx.lineTo(points[points.length - 1].x, height - bottom);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.beginPath();
+        points.forEach((point, i) => i ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+        ctx.strokeStyle = asset.color;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        const last = points[points.length - 1];
+        ctx.beginPath(); ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = asset.color; ctx.fill();
+      }
+
+      function renderAssets() {
+        $("assetList").innerHTML = assets.map((asset) => {
+          const quote = state.prices[asset.id];
+          const pct = quote.previous ? (quote.current / quote.previous - 1) * 100 : 0;
+          return `<div class="asset-row" data-asset="${asset.id}" tabindex="0" role="button" aria-label="查看${asset.name}">
+            <div><div class="asset-name">${asset.name}</div><div class="asset-code">${asset.id} · ${asset.sector}</div></div>
+            <div class="asset-price">${fmtPrice(quote.current)}</div>
+            <div class="asset-change ${tone(pct)}">${fmtSigned(pct)}</div>
+          </div>`;
+        }).join("");
+      }
+
+      function renderHoldings() {
+        const held = assets.filter((asset) => state.positions[asset.id]?.qty > 0);
+        if (!held.length) {
+          $("holdings").innerHTML = '<div class="empty">还没有持仓。选一只标的，在右侧下单面板买入。</div>';
+          return;
+        }
+        $("holdings").innerHTML = `<table class="holdings-table"><thead><tr><th>标的</th><th>数量</th><th>市值</th><th>浮动盈亏</th></tr></thead><tbody>${held.map((asset) => {
+          const pos = state.positions[asset.id];
+          const value = pos.qty * getPrice(asset.id);
+          const pnl = value - pos.qty * pos.avg;
+          return `<tr><td>${asset.name}<br><span style="color:#718099">${asset.id}</span></td><td>${pos.qty}</td><td>${fmtMoney(value)}</td><td class="${tone(pnl)}">${pnl >= 0 ? "+" : "−"}${fmtMoney(Math.abs(pnl))}</td></tr>`;
+        }).join("")}</tbody></table>`;
+      }
+
+      function renderLeaderboard() {
+        const players = [
+          { id: "you", name: "你", style: "手动交易 · 自主决策", equity: playerEquity(), color: "#edf2ff", isYou: true },
+          ...state.ai.map((player) => ({ ...player, equity: aiEquity(player), isYou: false }))
+        ].sort((a, b) => b.equity - a.equity);
+        const yourRank = players.findIndex((player) => player.isYou) + 1;
+        $("rank").textContent = `${yourRank} / 4`;
+        $("rankHint").textContent = yourRank === 1 ? "暂居榜首，继续保持" : `再加把劲，冲击第 ${yourRank - 1} 名`;
+        $("leaderboard").innerHTML = players.map((player, index) => {
+          const pnl = totalReturn(player.equity);
+          const name = player.isYou ? "你（玩家）" : player.name;
+          return `<div class="rank-item"><div class="rank-num ${index === 0 ? "top" : ""}">${index === 0 ? "★" : String(index + 1).padStart(2, "0")}</div><div><div class="rank-name" style="color:${player.color}">${name}</div><div class="rank-style">${player.style}</div></div><div><div class="rank-pnl ${tone(pnl)}">${fmtSigned(pnl)}%</div><div class="rank-equity">${fmtMoney(player.equity)}</div></div></div>`;
+        }).join("");
+      }
+
+      function renderFeed() {
+        $("feed").innerHTML = state.feed.slice(0, 12).map((item) => `<div class="feed-item ${item.type}"><div class="feed-time">第 ${item.day} 天 · ${item.type === "event" ? "市场动态" : "股东观点"}</div><div class="feed-text">${item.text}</div></div>`).join("");
+      }
+
+      function renderTrades() {
+        $("tradeLog").innerHTML = state.trades.length
+          ? state.trades.slice(0, 8).map((trade) => `<div class="log-row"><div class="log-side ${trade.side === "买入" ? "positive" : "negative"}">${trade.side}</div><div class="log-detail">${trade.name} ${trade.qty} 股 · ${fmtPrice(trade.price)}</div><div class="log-total">${fmtMoney(trade.qty * trade.price)}</div></div>`).join("")
+          : '<div class="empty">还没有成交记录。</div>';
+      }
+
+      function syncOrder() {
+        const id = $("orderStock").value;
+        if (!id) return;
+        const price = getPrice(id);
+        const rawQty = Number($("orderQty").value);
+        const qty = Number.isFinite(rawQty) && rawQty > 0 ? Math.floor(rawQty) : 0;
+        $("orderPrice").textContent = fmtPrice(price);
+        $("orderTotal").textContent = fmtMoney(price * qty);
+        const held = state.positions[id]?.qty || 0;
+        $("sellBtn").disabled = held < 1;
+        $("sellBtn").title = held ? `当前持有 ${held} 股` : "当前没有该标的持仓";
+      }
+
+      function render() {
+        $("stockSelect").value = selectedId;
+        if (!$("orderStock").value) $("orderStock").value = selectedId;
+        $("orderStock").value = $("orderStock").value || selectedId;
+        renderStats();
+        renderQuote();
+        renderAssets();
+        renderHoldings();
+        renderLeaderboard();
+        renderFeed();
+        renderTrades();
+        syncOrder();
+        saveGame();
+      }
+
+      function trade(side) {
+        const id = $("orderStock").value;
+        const asset = getAsset(id);
+        const qty = Math.floor(Number($("orderQty").value));
+        if (!asset || !Number.isFinite(qty) || qty < 1) {
+          setOrderHint("请输入至少 1 股的有效数量。", true);
+          return;
+        }
+        const price = getPrice(id);
+        if (side === "买入") {
+          const cost = qty * price;
+          if (cost > state.cash) {
+            setOrderHint(`现金不足：需要 ${fmtMoney(cost)}，可用 ${fmtMoney(state.cash)}。`, true);
+            return;
+          }
+          const old = state.positions[id] || { qty: 0, avg: 0 };
+          state.positions[id] = { qty: old.qty + qty, avg: (old.qty * old.avg + cost) / (old.qty + qty) };
+          state.cash -= cost;
+        } else {
+          const old = state.positions[id];
+          if (!old || old.qty < qty) {
+            setOrderHint(`持仓不足：当前只有 ${old?.qty || 0} 股。`, true);
+            return;
+          }
+          state.cash += qty * price;
+          old.qty -= qty;
+          if (old.qty === 0) delete state.positions[id];
+        }
+        state.trades.unshift({ day: state.day, side, id, name: asset.name, qty, price });
+        state.feed.unshift({
+          day: state.day,
+          type: "trade",
+          text: `你${side}${asset.name} ${qty} 股，成交价 ${fmtPrice(price)}。`
+        });
+        state.feed = state.feed.slice(0, 30);
+        setOrderHint(`${side}成功：${asset.name} ${qty} 股，${fmtMoney(qty * price)}。`);
+        render();
+      }
+
+      function addFeed(text, type = "event") {
+        state.feed.unshift({ day: state.day, type, text });
+        state.feed = state.feed.slice(0, 30);
+      }
+
+      function updateAi(player, marketMoves) {
+        const currentEquity = aiEquity(player);
+        const strongest = [...assets].sort((a, b) => marketMoves[b.id] - marketMoves[a.id])[0];
+        const weakest = [...assets].sort((a, b) => marketMoves[a.id] - marketMoves[b.id])[0];
+        let target = strongest;
+        let wantBuy = true;
+        let quantity;
+        if (player.id === "atlas") {
+          target = marketMoves[strongest.id] > 0 ? strongest : weakest;
+          wantBuy = marketMoves[target.id] > 0.005;
+          quantity = Math.max(1, Math.floor(currentEquity * 0.055 / getPrice(target.id)));
+        } else if (player.id === "moss") {
+          target = [...assets].sort((a, b) => a.initial / getPrice(a.id) - b.initial / getPrice(b.id))[0];
+          wantBuy = (player.positions[target.id]?.qty || 0) === 0 || Math.random() < 0.15;
+          quantity = Math.max(1, Math.floor(currentEquity * 0.035 / getPrice(target.id)));
+        } else {
+          target = marketMoves[strongest.id] > 0.012 ? strongest : weakest;
+          wantBuy = marketMoves[target.id] > -0.015;
+          quantity = Math.max(1, Math.floor(currentEquity * 0.04 / getPrice(target.id)));
+        }
+        if (Math.random() > 0.72) wantBuy = !wantBuy;
+        if (wantBuy) {
+          const affordable = Math.floor(player.cash * 0.94 / getPrice(target.id));
+          quantity = Math.min(quantity, affordable);
+          if (quantity > 0) {
+            const old = player.positions[target.id] || { qty: 0, avg: 0 };
+            const cost = quantity * getPrice(target.id);
+            player.positions[target.id] = { qty: old.qty + quantity, avg: (old.qty * old.avg + cost) / (old.qty + quantity) };
+            player.cash -= cost;
+            return `${player.name}买入${target.name}，继续执行${player.style.split(" · ")[0]}策略。`;
+          }
+        } else {
+          const held = player.positions[target.id];
+          if (held?.qty > 0) {
+            quantity = Math.min(held.qty, Math.max(1, Math.floor(held.qty * (player.id === "spark" ? 0.6 : 0.25))));
+            player.cash += quantity * getPrice(target.id);
+            held.qty -= quantity;
+            if (!held.qty) delete player.positions[target.id];
+            return `${player.name}减持${target.name} ${quantity} 股，锁定仓位弹性。`;
+          }
+        }
+        return null;
+      }
+
+      function advanceDay() {
+        state.day += 1;
+        marketGame.day = state.day;
+        if (marketGame.loanPrincipal > 0) marketGame.loanInterest += marketGame.loanPrincipal * 0.0003;
+        const nextDate = new Date(state.date + "T12:00:00");
+        nextDate.setDate(nextDate.getDate() + 1);
+        state.date = nextDate.toISOString().slice(0, 10);
+        const marketMoves = {};
+        const event = Math.random() < 0.46 ? events[Math.floor(Math.random() * events.length)] : null;
+        assets.forEach((asset) => {
+          const quote = state.prices[asset.id];
+          quote.previous = quote.current;
+          let move = asset.drift + randomNormal() * asset.vol;
+          if (event && (!event.target || event.target === asset.id)) move += event.impact * (event.target ? 0.65 : 0.45);
+          move = clamp(move, -0.18, 0.18);
+          quote.current = Number(Math.max(asset.initial * 0.15, quote.current * (1 + move)).toFixed(3));
+          quote.change = Number((quote.current - quote.previous).toFixed(3));
+          quote.volume = Math.floor(18000 + Math.random() * 190000 + Math.abs(move) * 900000);
+          quote.history.push(quote.current);
+          if (quote.history.length > 100) quote.history.shift();
+          marketMoves[asset.id] = move;
+        });
+        if (event) {
+          const affected = event.target ? getAsset(event.target).name : "多个板块";
+          addFeed(`${event.title}：${event.text}（${affected}）`);
+        } else {
+          const moves = assets.map((asset) => marketMoves[asset.id]);
+          const breadth = moves.filter((move) => move > 0).length;
+          const line = breadth >= 3
+            ? "多数板块收涨，市场情绪偏暖，成交活跃。"
+            : breadth <= 1
+              ? "多数标的回落，资金转为谨慎观望。"
+              : "板块表现分化，市场暂时缺少明确方向。";
+          addFeed(line);
+        }
+        const aiAction = state.ai.map((player) => updateAi(player, marketMoves)).filter(Boolean);
+        if (aiAction.length) addFeed(aiAction[Math.floor(Math.random() * aiAction.length)], "trade");
+        render();
+        renderMarketTerminal();
+        saveMarketGame();
+        showToast(`已进入第 ${state.day} 天 · ${state.date}`);
+      }
+
+      function resetGame() {
+        if (!window.confirm("确定要重开吗？本机保存的模拟资金、交易记录和 AI 对战进度都会被清除。")) return;
+        state = newGame();
+        Object.assign(marketGame, newMarketGame());
+        selectedId = assets[0].id;
+        $("orderStock").value = selectedId;
+        $("stockSelect").value = selectedId;
+        setOrderHint("新的模拟交易已开始。");
+        render();
+        renderMarketTerminal();
+        saveMarketGame();
+        connectMarketFeed();
+        showToast("新一轮模拟已开始。");
+      }
+
+      ensureSelectOptions($("stockSelect"));
+      ensureSelectOptions($("orderStock"));
+      $("stockSelect").value = selectedId;
+      $("orderStock").value = selectedId;
+      $("stockSelect").addEventListener("change", (event) => {
+        selectedId = event.target.value;
+        renderQuote();
+      });
+      $("orderStock").addEventListener("change", syncOrder);
+      $("orderQty").addEventListener("input", syncOrder);
+      $("buyBtn").addEventListener("click", () => trade("买入"));
+      $("sellBtn").addEventListener("click", () => trade("卖出"));
+      $("nextDay").addEventListener("click", advanceDay);
+      $("resetGame").addEventListener("click", resetGame);
+      $("assetList").addEventListener("click", (event) => {
+        const row = event.target.closest("[data-asset]");
+        if (!row) return;
+        selectedId = row.dataset.asset;
+        $("stockSelect").value = selectedId;
+        $("orderStock").value = selectedId;
+        setOrderHint(`已选择${getAsset(selectedId).name}，可在此下单。`);
+        render();
+      });
+      $("assetList").addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          const row = event.target.closest("[data-asset]");
+          if (row) { event.preventDefault(); row.click(); }
+        }
+      });
+      $("marketTypeSelect").addEventListener("change", () => {
+        selectMarketOptions();
+        connectMarketFeed();
+      });
+      $("marketSelect").addEventListener("change", (event) => {
+        marketSelectedId = event.target.value;
+        const asset = getMarketAsset();
+        $("marketQty").value = asset.type === "forex" ? "1000" : "0.001";
+        connectMarketFeed();
+        renderMarketTerminal();
+      });
+      $("venueSelect").addEventListener("change", (event) => {
+        marketVenue = event.target.value;
+        connectMarketFeed();
+      });
+      $("intervalSelect").addEventListener("change", (event) => {
+        marketInterval = event.target.value;
+        connectMarketFeed();
+      });
+      $("marketQty").addEventListener("input", renderMarketTerminal);
+      $("leverageSelect").addEventListener("change", renderMarketTerminal);
+      $("marketBuy").addEventListener("click", () => tradeMarketSpot("买入"));
+      $("marketSell").addEventListener("click", () => tradeMarketSpot("卖出"));
+      $("marketClose").addEventListener("click", closeMarketSpot);
+      $("marketLong").addEventListener("click", () => openLeveragedPosition(1));
+      $("marketShort").addEventListener("click", () => openLeveragedPosition(-1));
+      $("marketCloseFuture").addEventListener("click", closeLeveragedPosition);
+      $("borrowBtn").addEventListener("click", () => borrowMarketFunds(false));
+      $("repayBtn").addEventListener("click", () => borrowMarketFunds(true));
+      $("rankPrev").addEventListener("click", () => {
+        tournamentPage = Math.max(1, tournamentPage - 1);
+        renderTournament();
+      });
+      $("rankNext").addEventListener("click", () => {
+        tournamentPage = Math.min(10, tournamentPage + 1);
+        renderTournament();
+      });
+      window.addEventListener("resize", () => {
+        renderQuote();
+        renderCandleChart();
+      });
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch((error) => {
+            console.warn("无法注册离线缓存；游戏仍可在线使用。", error);
+          });
+        }, { once: true });
+      }
+      marketGame.day = state.day;
+      $("venueSelect").value = marketVenue;
+      $("intervalSelect").value = marketInterval;
+      selectMarketOptions();
+      render();
+      renderMarketTerminal();
+      connectMarketFeed();
+    })();
+  </script>
+</body>
+</html>
